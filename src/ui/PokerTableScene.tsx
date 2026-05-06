@@ -1,6 +1,6 @@
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { Environment, Float, OrbitControls, Text, useGLTF } from "@react-three/drei";
-import { Suspense, useMemo, useRef } from "react";
+import { Suspense, useEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
 import { clone as cloneSkeleton } from "three/examples/jsm/utils/SkeletonUtils.js";
 import type { RoomPublicState } from "../../shared/types";
@@ -8,6 +8,7 @@ import type { RoomPublicState } from "../../shared/types";
 type Props = {
   room: RoomPublicState | null;
   playerSeat: number | null;
+  onCroupierReady?: () => void;
 };
 
 type Vec3 = [number, number, number];
@@ -38,7 +39,7 @@ const CROUPIER_MODELS: CroupierModelConfig[] = [
   { id: "croupier-06", path: "/assets/croupiers/new_ciity_mom.glb", height: 2.08, rotationY: 0, y: -1.12, z: -0.02 }
 ];
 
-export function PokerTableScene({ room, playerSeat }: Props) {
+export function PokerTableScene({ room, playerSeat, onCroupierReady }: Props) {
   return (
     <Canvas camera={{ position: [0, 5.45, 7.7], fov: 42 }} shadows dpr={[1, 2]}>
       <color attach="background" args={["#07110f"]} />
@@ -51,7 +52,7 @@ export function PokerTableScene({ room, playerSeat }: Props) {
       <CameraTarget />
       <TableSurface />
       <CommunityCards room={room} />
-      <DealerPortrait room={room} />
+      <DealerPortrait room={room} onCroupierReady={onCroupierReady} />
       <ChipStacks room={room} />
       <SeatMarkers room={room} playerSeat={playerSeat} />
       <Environment preset="night" />
@@ -101,7 +102,7 @@ function TableSurface() {
   );
 }
 
-function DealerPortrait({ room }: { room: RoomPublicState | null }) {
+function DealerPortrait({ room, onCroupierReady }: { room: RoomPublicState | null; onCroupierReady?: () => void }) {
   const dealing = room ? room.street !== "waiting" && room.street !== "settled" : false;
   const model = useMemo(() => selectCroupierModel(room?.roomCode), [room?.roomCode]);
 
@@ -110,7 +111,7 @@ function DealerPortrait({ room }: { room: RoomPublicState | null }) {
       <group position={[0, 0.22, -2.55]} scale={1.72}>
         <CroupierBackdrop />
         <Suspense fallback={<CroupierLoadingSilhouette />}>
-          <CroupierModel model={model} dealing={dealing} />
+          <CroupierModel model={model} dealing={dealing} onReady={onCroupierReady} />
         </Suspense>
         <DealerCardFan dealing={dealing} />
       </group>
@@ -137,7 +138,7 @@ function CroupierBackdrop() {
   );
 }
 
-function CroupierModel({ model, dealing = false }: { model: CroupierModelConfig; dealing?: boolean }) {
+function CroupierModel({ model, dealing = false, onReady }: { model: CroupierModelConfig; dealing?: boolean; onReady?: () => void }) {
   const breatheRoot = useRef<THREE.Group>(null);
   const lookRoot = useRef<THREE.Group>(null);
   const lookTargets = useRef<LookTarget[]>([]);
@@ -161,6 +162,10 @@ function CroupierModel({ model, dealing = false }: { model: CroupierModelConfig;
     normalized.add(source);
     return normalized;
   }, [model.height, model.id, scene]);
+
+  useEffect(() => {
+    onReady?.();
+  }, [normalizedScene, onReady]);
 
   useFrame(({ pointer, clock }) => {
     const isCursorInFront = pointer.y > -0.68;

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type Dispatch, type SetStateAction } from "react";
+import { useCallback, useEffect, useRef, useState, type Dispatch, type SetStateAction } from "react";
 import { io, type Socket } from "socket.io-client";
 import type {
   AuthPayload,
@@ -25,8 +25,10 @@ type RoomListItem = {
 const serverUrl =
   import.meta.env.VITE_SERVER_URL || (window.location.port === "5173" ? "http://127.0.0.1:8787" : window.location.origin);
 
+const gameSocket: GameSocket = io(serverUrl, { autoConnect: false, transports: ["websocket"] });
+
 export function App() {
-  const socket = useMemo<GameSocket>(() => io(serverUrl, { autoConnect: true }), []);
+  const socket = gameSocket;
   const [snapshot, setSnapshot] = useState<GameSnapshot | null>(null);
   const [notice, setNotice] = useState("");
   const [email, setEmail] = useState("player@example.com");
@@ -36,28 +38,37 @@ export function App() {
   const [volume, setVolume] = useState(0.35);
   const [rooms, setRooms] = useState<RoomListItem[]>([]);
   const [rulesOpen, setRulesOpen] = useState(false);
+  const [gameSceneReady, setGameSceneReady] = useState(false);
   const audio = useRef<AudioContext | null>(null);
+  const soundSettings = useRef({ enabled: soundEnabled, volume });
 
   const room = snapshot?.room ?? null;
   const player = snapshot?.player ?? null;
 
   useEffect(() => {
+    soundSettings.current = { enabled: soundEnabled, volume };
+  }, [soundEnabled, volume]);
+
+  useEffect(() => {
     if (!socket.connected) {
       socket.connect();
     }
+
+    function handleSfx(name: SfxName) {
+      const settings = soundSettings.current;
+      if (settings.enabled) playSfx(name, settings.volume, audio);
+    }
+
     socket.on("snapshot", setSnapshot);
     socket.on("notice", setNotice);
-    socket.on("sfx", (name) => {
-      if (soundEnabled) playSfx(name, volume, audio);
-    });
+    socket.on("sfx", handleSfx);
 
     return () => {
       socket.off("snapshot", setSnapshot);
       socket.off("notice", setNotice);
-      socket.off("sfx");
-      socket.disconnect();
+      socket.off("sfx", handleSfx);
     };
-  }, [socket, soundEnabled, volume]);
+  }, [socket]);
 
   useEffect(() => {
     if (!player || room) return;
@@ -81,6 +92,14 @@ export function App() {
       window.clearInterval(interval);
     };
   }, [player, room]);
+
+  useEffect(() => {
+    setGameSceneReady(false);
+  }, [room?.roomCode]);
+
+  const handleCroupierReady = useCallback(() => {
+    setGameSceneReady(true);
+  }, []);
 
   function auth(payload: AuthPayload) {
     socket.emit("auth", payload, setSnapshot);
@@ -265,7 +284,7 @@ export function App() {
   return (
     <main className="game-shell">
       <section className="game-stage" aria-label="Poker game room">
-        <PokerTableScene room={room} playerSeat={player.seatIndex ?? null} />
+        <PokerTableScene room={room} playerSeat={player.seatIndex ?? null} onCroupierReady={handleCroupierReady} />
         <SeatRing room={room} localUserId={player.userId} />
 
         <div className="game-topbar">
@@ -312,9 +331,22 @@ export function App() {
         </div>
 
         {notice ? <div className="notice game-notice">{notice}</div> : null}
+        {!gameSceneReady ? <GameLoadingOverlay /> : null}
         {rulesOpen ? <RulesModal onClose={() => setRulesOpen(false)} /> : null}
       </section>
     </main>
+  );
+}
+
+function GameLoadingOverlay() {
+  return (
+    <div className="game-loading-overlay" role="status" aria-live="polite">
+      <div className="loading-card">
+        <div className="loading-chip" />
+        <strong>Preparing table</strong>
+        <span>Loading croupier model, card deck, and table lighting.</span>
+      </div>
+    </div>
   );
 }
 
