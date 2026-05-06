@@ -37,7 +37,7 @@ export type HandHistoryEntry = {
   endedAt: number;
   communityCards: Card[];
   showdown: boolean;
-  winners: Array<{ userId: string; displayName: string; amount: number; handName?: string; holeCards?: Card[] }>;
+  winners: Array<{ userId: string; displayName: string; amount: number; handName?: string; holeCards?: Card[]; bestCards?: Card[] }>;
   participants: Array<{ userId: string; displayName: string; delta: number }>;
 };
 

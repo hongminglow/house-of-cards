@@ -32,8 +32,8 @@ export function App() {
   const socket = gameSocket;
   const [snapshot, setSnapshot] = useState<GameSnapshot | null>(null);
   const [notice, setNotice] = useState("");
-  const [email, setEmail] = useState("player@example.com");
-  const [displayName, setDisplayName] = useState("Ace");
+  const [email, setEmail] = useState("");
+  const [displayName, setDisplayName] = useState("");
   const [roomCode, setRoomCode] = useState("");
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [volume, setVolume] = useState(0.35);
@@ -312,8 +312,8 @@ export function App() {
                   <strong>{player.accountBalance >= 1_000_000 ? "Ahead" : player.accountBalance >= 500_000 ? "Stable" : "Rebuild"}</strong>
                 </div>
                 <div>
-                  <span>Preferred seat</span>
-                  <strong>Button</strong>
+                  <span>Table style</span>
+                  <strong>No-limit</strong>
                 </div>
                 <div>
                   <span>Next milestone</span>
@@ -660,17 +660,14 @@ function HistoryControl({ entries, open, playerUserId, setOpen }: { entries: Han
 function HistoryEntryRow({ entry, playerUserId }: { entry: HandHistoryEntry; playerUserId: string }) {
   const playerResult = entry.participants.find((participant) => participant.userId === playerUserId);
   const resultClassName = playerResult ? (playerResult.delta >= 0 ? "history-result positive" : "history-result negative") : "history-result";
-  const winnerSummary = entry.winners
-    .map((winner) => `${winner.displayName}${winner.handName ? ` · ${winner.handName}` : ""}`)
-    .join(", ");
-  const shownCards = entry.winners.flatMap((winner) => winner.holeCards ?? []);
+  const displayWinner = entry.winners.find((winner) => winner.userId === playerUserId) ?? entry.winners[0];
+  const shownCards = displayWinner?.bestCards ?? displayWinner?.holeCards ?? [];
 
   return (
     <article className="history-row">
       <div className="history-row-main">
+        <small className="history-hand-number">#{entry.handNumber}</small>
         <div className="history-combo">
-          <small>#{entry.handNumber}</small>
-          <strong>{winnerSummary || "Won without reveal"}</strong>
           {shownCards.length ? (
             <div className="history-card-pair" aria-label="Shown winner cards">
               {shownCards.map((card, index) => (
@@ -678,7 +675,7 @@ function HistoryEntryRow({ entry, playerUserId }: { entry: HandHistoryEntry; pla
               ))}
             </div>
           ) : (
-            <span>No cards shown</span>
+            <span className="history-hidden-cards" aria-label="No cards shown" />
           )}
         </div>
         {playerResult ? <span className={resultClassName}>{formatSignedCurrency(playerResult.delta)}</span> : <span className="history-result empty" aria-hidden="true" />}
@@ -809,11 +806,17 @@ function playSfx(name: SfxName, volume: number, ref: React.MutableRefObject<Audi
   ref.current ??= new AudioContextClass();
   const ctx = ref.current;
   if (name === "card") {
-    playNoiseHit(ctx, volume, 0.09, 950, 0.28);
+    playCardDraw(ctx, volume);
+    return;
+  }
+  if (name === "deal") {
+    for (let index = 0; index < 3; index += 1) {
+      playCardDraw(ctx, volume * 0.85, index * 0.055);
+    }
     return;
   }
   if (name === "chips-fly") {
-    playChipFly(ctx, volume);
+    playChipDrop(ctx, volume);
     return;
   }
   const osc = ctx.createOscillator();
@@ -842,7 +845,34 @@ function playSfx(name: SfxName, volume: number, ref: React.MutableRefObject<Audi
   osc.stop(ctx.currentTime + duration);
 }
 
-function playNoiseHit(ctx: AudioContext, volume: number, duration: number, filterFrequency: number, gainScale = 0.12) {
+function playCardDraw(ctx: AudioContext, volume: number, offset = 0) {
+  const start = ctx.currentTime + offset;
+  playNoiseHit(ctx, volume, 0.18, 2600, 0.34, start, "highpass", 0.9);
+  playNoiseHit(ctx, volume, 0.07, 5400, 0.16, start + 0.045, "bandpass", 5.8);
+
+  const flick = ctx.createOscillator();
+  const gain = ctx.createGain();
+  flick.type = "triangle";
+  flick.frequency.setValueAtTime(185, start + 0.012);
+  flick.frequency.exponentialRampToValueAtTime(92, start + 0.12);
+  gain.gain.setValueAtTime(volume * 0.04, start + 0.012);
+  gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.14);
+  flick.connect(gain);
+  gain.connect(ctx.destination);
+  flick.start(start + 0.012);
+  flick.stop(start + 0.15);
+}
+
+function playNoiseHit(
+  ctx: AudioContext,
+  volume: number,
+  duration: number,
+  filterFrequency: number,
+  gainScale = 0.12,
+  start = ctx.currentTime,
+  filterType: BiquadFilterType = "bandpass",
+  q = 3.2
+) {
   const sampleCount = Math.max(1, Math.floor(ctx.sampleRate * duration));
   const buffer = ctx.createBuffer(1, sampleCount, ctx.sampleRate);
   const data = buffer.getChannelData(0);
@@ -854,34 +884,38 @@ function playNoiseHit(ctx: AudioContext, volume: number, duration: number, filte
   const source = ctx.createBufferSource();
   const filter = ctx.createBiquadFilter();
   const gain = ctx.createGain();
-  filter.type = "bandpass";
+  filter.type = filterType;
   filter.frequency.value = filterFrequency;
-  filter.Q.value = 3.2;
+  filter.Q.value = q;
   gain.gain.value = volume * gainScale;
   source.buffer = buffer;
   source.connect(filter);
   filter.connect(gain);
   gain.connect(ctx.destination);
-  source.start();
+  source.start(start);
 }
 
-function playChipFly(ctx: AudioContext, volume: number) {
-  [360, 470, 590, 720, 880].forEach((frequency, index) => {
+function playChipDrop(ctx: AudioContext, volume: number) {
+  const base = ctx.currentTime;
+  for (let index = 0; index < 26; index += 1) {
+    const start = base + index * 0.018 + Math.random() * 0.028;
+    const frequency = 620 + Math.random() * 1900;
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
-    const start = ctx.currentTime + index * 0.032;
-    osc.type = index % 2 ? "square" : "triangle";
+    osc.type = index % 3 === 0 ? "square" : "triangle";
     osc.frequency.setValueAtTime(frequency, start);
-    osc.frequency.exponentialRampToValueAtTime(frequency * 0.62, start + 0.11);
-    gain.gain.setValueAtTime(volume * 0.075, start);
-    gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.16);
+    osc.frequency.exponentialRampToValueAtTime(frequency * (0.45 + Math.random() * 0.3), start + 0.08);
+    gain.gain.setValueAtTime(volume * (0.035 + Math.random() * 0.06), start);
+    gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.12 + Math.random() * 0.08);
     osc.connect(gain);
     gain.connect(ctx.destination);
     osc.start(start);
-    osc.stop(start + 0.18);
-  });
-  playNoiseHit(ctx, volume, 0.28, 2200, 0.24);
-  window.setTimeout(() => playNoiseHit(ctx, volume, 0.18, 3200, 0.16), 70);
+    osc.stop(start + 0.22);
+  }
+
+  for (let index = 0; index < 5; index += 1) {
+    playNoiseHit(ctx, volume, 0.12, 2600 + index * 520, 0.2, base + index * 0.075, "highpass", 1.1);
+  }
 }
 
 declare global {

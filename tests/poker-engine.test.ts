@@ -10,6 +10,41 @@ const user = (index: number) => ({
   chipBalance: 1_000_000
 });
 
+type TestSeat = {
+  userId: string;
+  holeCards: Card[];
+  currentBet: number;
+  committed: number;
+  stack: number;
+  hasFolded: boolean;
+  isAllIn: boolean;
+};
+
+type TestableRoom = {
+  seats: Map<number, TestSeat>;
+  communityCards: Card[];
+  currentBet: number;
+  currentTurnSeat: number | null;
+  showdown: () => ReturnType<PokerRoom["act"]>;
+};
+
+function forceShowdown(room: PokerRoom, hands: [Card[], Card[]], board: Card[]) {
+  const testRoom = room as unknown as TestableRoom;
+  const seats = [...testRoom.seats.values()];
+  seats.forEach((seat, index) => {
+    seat.holeCards = hands[index];
+    seat.currentBet = 1_000;
+    seat.committed = 1_000;
+    seat.stack = 99_000;
+    seat.hasFolded = false;
+    seat.isAllIn = false;
+  });
+  testRoom.communityCards = board;
+  testRoom.currentBet = 1_000;
+  testRoom.currentTurnSeat = null;
+  return testRoom.showdown();
+}
+
 describe("poker evaluator", () => {
   it("ranks a flush higher than a straight", () => {
     const flush: Card[] = [
@@ -169,5 +204,73 @@ describe("poker room", () => {
     expect(entry.winners[0].holeCards).toBeUndefined();
     expect(entry.participants).toHaveLength(2);
     expect(entry.participants.reduce((total, participant) => total + participant.delta, 0)).toBe(0);
+  });
+
+  it("settles one winner when one showdown hand is stronger", () => {
+    const room = new PokerRoom("TEST08");
+    room.join(user(1));
+    room.join(user(2));
+    room.ready("u1");
+    room.ready("u2");
+
+    const event = forceShowdown(
+      room,
+      [
+        [
+          { rank: "A", suit: "clubs" },
+          { rank: "3", suit: "diamonds" }
+        ],
+        [
+          { rank: "K", suit: "clubs" },
+          { rank: "4", suit: "diamonds" }
+        ]
+      ],
+      [
+        { rank: "Q", suit: "hearts" },
+        { rank: "J", suit: "diamonds" },
+        { rank: "9", suit: "clubs" },
+        { rank: "7", suit: "spades" },
+        { rank: "2", suit: "hearts" }
+      ]
+    );
+
+    expect(event.type).toBe("settled");
+    expect(room.publicState().winners).toHaveLength(1);
+    expect(room.publicState().winners[0].userId).toBe("u1");
+    expect(room.publicState().history[0].winners[0].bestCards).toHaveLength(5);
+  });
+
+  it("splits the pot when showdown hands tie exactly", () => {
+    const room = new PokerRoom("TEST09");
+    room.join(user(1));
+    room.join(user(2));
+    room.ready("u1");
+    room.ready("u2");
+
+    const event = forceShowdown(
+      room,
+      [
+        [
+          { rank: "2", suit: "clubs" },
+          { rank: "3", suit: "diamonds" }
+        ],
+        [
+          { rank: "4", suit: "clubs" },
+          { rank: "5", suit: "diamonds" }
+        ]
+      ],
+      [
+        { rank: "A", suit: "hearts" },
+        { rank: "K", suit: "diamonds" },
+        { rank: "Q", suit: "clubs" },
+        { rank: "J", suit: "spades" },
+        { rank: "T", suit: "hearts" }
+      ]
+    );
+
+    expect(event.type).toBe("settled");
+    expect(room.publicState().winners).toHaveLength(2);
+    expect(room.publicState().winners.map((winner) => winner.amount)).toEqual([1_000, 1_000]);
+    expect(room.publicState().history[0].participants.map((participant) => participant.delta)).toEqual([0, 0]);
   });
 });

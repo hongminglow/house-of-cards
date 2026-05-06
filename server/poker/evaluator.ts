@@ -5,6 +5,7 @@ export type HandResult = {
   score: number;
   name: string;
   ranks: number[];
+  cards: Card[];
 };
 
 const handRanks = [
@@ -26,7 +27,7 @@ export function evaluateSeven(cards: Card[]): HandResult {
 
   let best: HandResult | null = null;
   for (const combo of combinations(cards, 5)) {
-    const result = evaluateFive(combo);
+    const result = { ...evaluateFive(combo), cards: [...combo] };
     if (!best || result.score > best.score) {
       best = result;
     }
@@ -90,7 +91,8 @@ function makeResult(category: number, ranks: number[]): HandResult {
   return {
     score,
     name: handRanks[category],
-    ranks: padded
+    ranks: padded,
+    cards: []
   };
 }
 

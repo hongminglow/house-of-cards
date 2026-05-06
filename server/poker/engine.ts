@@ -470,7 +470,7 @@ export class PokerRoom {
       result: evaluateSeven([...seat.holeCards, ...this.communityCards])
     }));
     const pots = buildPots(this.activeSeats());
-    const payouts = new Map<string, { amount: number; handName?: string }>();
+    const payouts = new Map<string, { amount: number; handName?: string; bestCards?: Card[] }>();
 
     for (const pot of pots) {
       const eligible = evaluated.filter((item) => pot.eligibleUserIds.has(item.seat.userId));
@@ -479,9 +479,10 @@ export class PokerRoom {
       const share = Math.floor(pot.amount / winners.length);
       const remainder = pot.amount - share * winners.length;
       winners.forEach((winner, index) => {
-        const existing = payouts.get(winner.seat.userId) ?? { amount: 0, handName: winner.result.name };
+        const existing = payouts.get(winner.seat.userId) ?? { amount: 0, handName: winner.result.name, bestCards: winner.result.cards };
         existing.amount += share + (index === 0 ? remainder : 0);
         existing.handName = winner.result.name;
+        existing.bestCards = winner.result.cards;
         payouts.set(winner.seat.userId, existing);
       });
     }
@@ -490,13 +491,14 @@ export class PokerRoom {
       [...payouts.entries()].map(([userId, payout]) => ({
         seat: this.requireSeat(userId),
         amount: payout.amount,
-        handName: payout.handName
+        handName: payout.handName,
+        bestCards: payout.bestCards
       })),
       true
     );
   }
 
-  private settle(results: Array<{ seat: SeatState; amount: number; handName?: string }>, showdown = false): RoomEvent {
+  private settle(results: Array<{ seat: SeatState; amount: number; handName?: string; bestCards?: Card[] }>, showdown = false): RoomEvent {
     results.forEach(({ seat, amount }) => {
       seat.stack += amount;
     });
@@ -507,7 +509,10 @@ export class PokerRoom {
       amount,
       handName
     }));
-    this.lastAction = `${this.winners.map((winner) => winner.displayName).join(", ")} won the pot`;
+    this.lastAction =
+      this.winners.length > 1
+        ? `${this.winners.map((winner) => winner.displayName).join(", ")} split the pot`
+        : `${this.winners[0]?.displayName ?? "A player"} won the pot`;
     this.street = "settled";
     this.currentTurnSeat = null;
     this.actionDeadlineAt = null;
@@ -518,12 +523,12 @@ export class PokerRoom {
         endedAt: Date.now(),
         communityCards: [...this.communityCards],
         showdown,
-        winners: results.map(({ seat, amount, handName }) => ({
+        winners: results.map(({ seat, amount, handName, bestCards }) => ({
           userId: seat.userId,
           displayName: seat.displayName,
           amount,
           handName,
-          ...(showdown ? { holeCards: [...seat.holeCards] } : {})
+          ...(showdown ? { holeCards: [...seat.holeCards], bestCards: bestCards ? [...bestCards] : undefined } : {})
         })),
         participants: settlements.map((settlement) => {
           const seat = this.requireSeat(settlement.userId);
@@ -557,7 +562,7 @@ export class PokerRoom {
     return { type: "settled", record };
   }
 
-  private settlementDeltas(results: Array<{ seat: SeatState; amount: number; handName?: string }>): SettlementDelta[] {
+  private settlementDeltas(results: Array<{ seat: SeatState; amount: number; handName?: string; bestCards?: Card[] }>): SettlementDelta[] {
     const payoutByUser = new Map(results.map(({ seat, amount }) => [seat.userId, amount]));
     return this.activeSeats()
       .filter((seat) => seat.holeCards.length > 0 || seat.committed > 0)
