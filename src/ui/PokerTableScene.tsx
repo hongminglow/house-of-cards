@@ -11,8 +11,6 @@ type Props = {
   onCroupierReady?: () => void;
 };
 
-type Vec3 = [number, number, number];
-
 type CroupierModelConfig = {
   id: string;
   path: string;
@@ -31,17 +29,17 @@ type LookTarget = {
 };
 
 const CROUPIER_MODELS: CroupierModelConfig[] = [
-  { id: "croupier-01", path: "/assets/croupiers/show_breast_girl.glb", height: 2.08, rotationY: 0, y: -1.12, z: -0.02 },
-  { id: "croupier-02", path: "/assets/croupiers/school_girl_sit_on_the_chair.glb", height: 2.02, rotationY: 0, y: -1.08, z: -0.04 },
-  { id: "croupier-03", path: "/assets/croupiers/stella_girl.glb", height: 2.08, rotationY: 0, y: -1.12, z: -0.02 },
-  { id: "croupier-04", path: "/assets/croupiers/fashion_girl_asian_girl.glb", height: 2.08, rotationY: 0, y: -1.12, z: -0.02 },
-  { id: "croupier-05", path: "/assets/croupiers/spot_light_girl.glb", height: 2.04, rotationY: 0, y: -1.1, z: -0.02 },
-  { id: "croupier-06", path: "/assets/croupiers/new_ciity_mom.glb", height: 2.08, rotationY: 0, y: -1.12, z: -0.02 }
+  { id: "croupier-01", path: "/assets/croupiers/show_breast_girl.glb", height: 2.92, rotationY: 0, y: -1.98, z: -0.18 },
+  { id: "croupier-02", path: "/assets/croupiers/school_girl_sit_on_the_chair.glb", height: 2.82, rotationY: 0, y: -1.9, z: -0.2 },
+  { id: "croupier-03", path: "/assets/croupiers/stella_girl.glb", height: 2.92, rotationY: 0, y: -1.98, z: -0.18 },
+  { id: "croupier-04", path: "/assets/croupiers/fashion_girl_asian_girl.glb", height: 2.92, rotationY: 0, y: -1.98, z: -0.18 },
+  { id: "croupier-05", path: "/assets/croupiers/free_cure_girl_3.glb", height: 2.86, rotationY: 0, y: -1.94, z: -0.18 },
+  { id: "croupier-06", path: "/assets/croupiers/new_ciity_mom.glb", height: 2.92, rotationY: 0, y: -1.98, z: -0.18 }
 ];
 
 export function PokerTableScene({ room, playerSeat, onCroupierReady }: Props) {
   return (
-    <Canvas camera={{ position: [0, 5.45, 7.7], fov: 42 }} shadows dpr={[1, 2]}>
+    <Canvas camera={{ position: [0, 4.85, 6.35], fov: 38 }} shadows dpr={[1, 2]}>
       <color attach="background" args={["#07110f"]} />
       <fog attach="fog" args={["#07110f", 11, 27]} />
       <ambientLight intensity={0.5} />
@@ -66,24 +64,27 @@ function CameraTarget() {
   useFrame(() => {
     const narrow = size.width < 700;
     if (camera instanceof THREE.PerspectiveCamera) {
-      const targetFov = narrow ? 72 : 42;
+      const targetFov = narrow ? 66 : 38;
       if (Math.abs(camera.fov - targetFov) > 0.1) {
         camera.fov = THREE.MathUtils.lerp(camera.fov, targetFov, 0.12);
         camera.updateProjectionMatrix();
       }
     }
-    const targetPosition = narrow ? new THREE.Vector3(0, 9.2, 14.4) : new THREE.Vector3(0, 5.45, 7.7);
+    const targetPosition = narrow ? new THREE.Vector3(0, 8.2, 12.6) : new THREE.Vector3(0, 4.85, 6.35);
     camera.position.lerp(targetPosition, 0.08);
-    camera.lookAt(0, narrow ? 0.35 : 0.78, narrow ? 0.1 : -0.25);
+    camera.lookAt(0, narrow ? 0.6 : 1.04, narrow ? -0.18 : -0.58);
   });
   return null;
 }
 
 function TableSurface() {
+  const feltGeometry = useMemo(() => createDealerCutoutTableGeometry(5.8, 0.16), []);
+  const dealerCutoutRim = useMemo(() => createDealerCutoutRimGeometry(), []);
+
   return (
     <group>
-      <mesh receiveShadow position={[0, -0.1, 0]}>
-        <cylinderGeometry args={[5.8, 5.8, 0.16, 96]} />
+      <mesh receiveShadow position={[0, -0.12, 0]} rotation-x={-Math.PI / 2}>
+        <primitive object={feltGeometry} attach="geometry" />
         <meshStandardMaterial color="#12382f" roughness={0.82} metalness={0.05} />
       </mesh>
       <mesh rotation-x={-Math.PI / 2} position={[0, 0.02, 0]}>
@@ -94,12 +95,38 @@ function TableSurface() {
         <ringGeometry args={[1.5, 1.55, 96]} />
         <meshStandardMaterial color="#2b7d69" roughness={0.8} />
       </mesh>
-      <mesh rotation-x={-Math.PI / 2} position={[0, 0.055, -2.05]}>
-        <ringGeometry args={[0.52, 0.62, 40]} />
-        <meshStandardMaterial color="#d6aa54" roughness={0.5} metalness={0.3} />
+      <mesh rotation-x={-Math.PI / 2} position={[0, 0.06, 0]}>
+        <primitive object={dealerCutoutRim} attach="geometry" />
+        <meshStandardMaterial color="#d6aa54" roughness={0.46} metalness={0.34} />
       </mesh>
     </group>
   );
+}
+
+function createDealerCutoutTableGeometry(radius: number, depth: number) {
+  const tableShape = new THREE.Shape();
+  tableShape.absellipse(0, 0, radius, radius, 0, Math.PI * 2, false, 0);
+
+  const dealerCutout = new THREE.Path();
+  dealerCutout.absellipse(0, 2.28, 1.22, 0.92, 0, Math.PI * 2, true, 0);
+  tableShape.holes.push(dealerCutout);
+
+  return new THREE.ExtrudeGeometry(tableShape, {
+    bevelEnabled: false,
+    curveSegments: 96,
+    depth
+  });
+}
+
+function createDealerCutoutRimGeometry() {
+  const rimShape = new THREE.Shape();
+  rimShape.absellipse(0, 2.28, 1.38, 1.05, 0, Math.PI * 2, false, 0);
+
+  const rimHole = new THREE.Path();
+  rimHole.absellipse(0, 2.28, 1.22, 0.92, 0, Math.PI * 2, true, 0);
+  rimShape.holes.push(rimHole);
+
+  return new THREE.ShapeGeometry(rimShape, 72);
 }
 
 function DealerPortrait({ room, onCroupierReady }: { room: RoomPublicState | null; onCroupierReady?: () => void }) {
@@ -108,33 +135,12 @@ function DealerPortrait({ room, onCroupierReady }: { room: RoomPublicState | nul
 
   return (
     <Float speed={1.05} rotationIntensity={0.025} floatIntensity={0.05}>
-      <group position={[0, 0.22, -2.55]} scale={1.72}>
-        <CroupierBackdrop />
+      <group position={[0, 0.24, -2.66]} scale={1.86}>
         <Suspense fallback={<CroupierLoadingSilhouette />}>
           <CroupierModel model={model} dealing={dealing} onReady={onCroupierReady} />
         </Suspense>
-        <DealerCardFan dealing={dealing} />
       </group>
     </Float>
-  );
-}
-
-function CroupierBackdrop() {
-  return (
-    <group position={[0, 0.96, -0.52]}>
-      <mesh position={[0, 0.12, 0]} rotation-x={Math.PI / 2}>
-        <torusGeometry args={[0.62, 0.035, 32, 72]} />
-        <meshStandardMaterial color="#c7974d" emissive="#3d2708" emissiveIntensity={0.24} roughness={0.34} metalness={0.6} />
-      </mesh>
-      <mesh position={[0, 0.18, 0.06]} scale={[0.7, 0.9, 0.08]}>
-        <sphereGeometry args={[0.24, 28, 16]} />
-        <meshStandardMaterial color="#c7974d" emissive="#3d2708" emissiveIntensity={0.16} roughness={0.4} metalness={0.5} />
-      </mesh>
-      <mesh position={[0, -0.08, 0.06]} rotation-x={Math.PI}>
-        <coneGeometry args={[0.22, 0.42, 3]} />
-        <meshStandardMaterial color="#c7974d" emissive="#3d2708" emissiveIntensity={0.16} roughness={0.4} metalness={0.5} />
-      </mesh>
-    </group>
   );
 }
 
@@ -206,53 +212,6 @@ function CroupierModel({ model, dealing = false, onReady }: { model: CroupierMod
   );
 }
 
-function DealerCardFan({ dealing = false }: { dealing?: boolean }) {
-  const dealCard = useRef<THREE.Group>(null);
-  const cardFan = useRef<THREE.Group>(null);
-
-  useFrame(({ clock }) => {
-    const dealPulse = dealing ? Math.sin(clock.elapsedTime * 3.15) * 0.5 + 0.5 : 0;
-
-    if (dealCard.current) {
-      dealCard.current.position.x = THREE.MathUtils.lerp(dealCard.current.position.x, 0.78 + dealPulse * 0.38, 0.08);
-      dealCard.current.position.z = THREE.MathUtils.lerp(dealCard.current.position.z, 0.62 + dealPulse * 0.16, 0.08);
-      dealCard.current.rotation.z = THREE.MathUtils.lerp(dealCard.current.rotation.z, -0.25 - dealPulse * 0.16, 0.08);
-    }
-
-    if (cardFan.current) {
-      cardFan.current.rotation.y = THREE.MathUtils.lerp(cardFan.current.rotation.y, -0.24 + dealPulse * 0.06, 0.06);
-      cardFan.current.position.y = THREE.MathUtils.lerp(cardFan.current.position.y, 0.6 + dealPulse * 0.025, 0.08);
-    }
-  });
-
-  return (
-    <group>
-      <group ref={cardFan} position={[-0.78, 0.6, 0.72]} rotation={[0.18, -0.24, 0.48]}>
-        {[-2, -1, 0, 1, 2].map((offset) => (
-          <MiniDealerCard key={offset} position={[offset * 0.06, 0, Math.abs(offset) * 0.012]} rotation={[0, 0, offset * -0.14]} red={offset % 2 === 0} />
-        ))}
-      </group>
-      <group ref={dealCard} position={[0.78, 0.32, 0.62]} rotation={[0.12, 0.06, -0.25]}>
-        <MiniDealerCard position={[0, 0, 0]} rotation={[0, 0, 0]} red />
-      </group>
-    </group>
-  );
-}
-
-function MiniDealerCard({ position, rotation, red = false }: { position: Vec3; rotation: Vec3; red?: boolean }) {
-  return (
-    <group position={position} rotation={rotation}>
-      <mesh castShadow>
-        <boxGeometry args={[0.28, 0.016, 0.4]} />
-        <meshStandardMaterial color="#fff6e7" roughness={0.42} />
-      </mesh>
-      <mesh position={[-0.08, 0.011, -0.12]}>
-        <boxGeometry args={[0.05, 0.006, 0.05]} />
-        <meshStandardMaterial color={red ? "#ba2732" : "#111816"} roughness={0.42} />
-      </mesh>
-    </group>
-  );
-}
 
 function CroupierLoadingSilhouette() {
   return (
