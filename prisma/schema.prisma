@@ -1,0 +1,110 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id             String       @id @default(cuid())
+  email          String       @unique
+  displayName    String
+  chipBalance    BigInt       @default(1000000)
+  chipGrantIssued Boolean     @default(true)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  seats          RoomSeat[]
+  actions        HandAction[]
+  settlements    Settlement[]
+}
+
+model Room {
+  id        String     @id @default(cuid())
+  code      String     @unique
+  status    RoomStatus @default(WAITING)
+  buyIn     BigInt     @default(100000)
+  smallBlind BigInt    @default(500)
+  bigBlind  BigInt     @default(1000)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  seats     RoomSeat[]
+  hands     Hand[]
+}
+
+model RoomSeat {
+  id        String   @id @default(cuid())
+  roomId    String
+  userId    String
+  seatIndex Int
+  stack     BigInt
+  joinedAt  DateTime @default(now())
+  leftAt    DateTime?
+  room      Room     @relation(fields: [roomId], references: [id])
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@unique([roomId, seatIndex])
+}
+
+model Hand {
+  id             String       @id @default(cuid())
+  roomId         String
+  handNumber     Int
+  deckSeed        String
+  communityCards  Json
+  snapshot        Json
+  startedAt       DateTime     @default(now())
+  completedAt     DateTime?
+  room            Room         @relation(fields: [roomId], references: [id])
+  actions         HandAction[]
+  settlements     Settlement[]
+
+  @@unique([roomId, handNumber])
+}
+
+model HandAction {
+  id        String     @id @default(cuid())
+  handId    String
+  userId    String
+  type      ActionType
+  amount    BigInt     @default(0)
+  street    Street
+  createdAt DateTime   @default(now())
+  hand      Hand       @relation(fields: [handId], references: [id])
+  user      User       @relation(fields: [userId], references: [id])
+}
+
+model Settlement {
+  id            String   @id @default(cuid())
+  handId        String
+  userId        String
+  amount        BigInt
+  resultingStack BigInt
+  createdAt     DateTime @default(now())
+  hand          Hand     @relation(fields: [handId], references: [id])
+  user          User     @relation(fields: [userId], references: [id])
+}
+
+enum RoomStatus {
+  WAITING
+  ACTIVE
+  CLOSED
+}
+
+enum ActionType {
+  FOLD
+  CHECK
+  CALL
+  BET
+  RAISE
+  ALL_IN
+}
+
+enum Street {
+  PREFLOP
+  FLOP
+  TURN
+  RIVER
+  SHOWDOWN
+}

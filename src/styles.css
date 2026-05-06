@@ -1,0 +1,409 @@
+:root {
+  color: #f6ead4;
+  background: #07110f;
+  font-family:
+    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  --surface: rgba(12, 24, 21, 0.82);
+  --surface-strong: rgba(17, 37, 32, 0.94);
+  --border: rgba(232, 202, 128, 0.22);
+  --accent: #e8ca80;
+  --green: #75d8b5;
+  --red: #d96d72;
+  --muted: #b9aa8e;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  overflow: hidden;
+}
+
+button,
+input {
+  font: inherit;
+}
+
+button {
+  border: 1px solid var(--border);
+  background: rgba(232, 202, 128, 0.11);
+  color: #f6ead4;
+  border-radius: 8px;
+  min-height: 42px;
+  padding: 0 14px;
+  cursor: pointer;
+}
+
+button:disabled {
+  opacity: 0.42;
+  cursor: not-allowed;
+}
+
+input {
+  width: 100%;
+  border: 1px solid rgba(246, 234, 212, 0.18);
+  background: rgba(0, 0, 0, 0.24);
+  color: #fff9ea;
+  border-radius: 8px;
+  min-height: 42px;
+  padding: 0 12px;
+  outline: none;
+}
+
+.app-shell {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 360px;
+  height: 100vh;
+  background:
+    radial-gradient(circle at 50% 20%, rgba(39, 110, 84, 0.32), transparent 34%),
+    linear-gradient(120deg, #07110f 0%, #101614 48%, #150e0b 100%);
+}
+
+.table-stage {
+  position: relative;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.table-topbar {
+  position: absolute;
+  left: 28px;
+  right: 28px;
+  top: 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  pointer-events: none;
+}
+
+.micro-label {
+  margin: 0 0 6px;
+  color: var(--green);
+  font-size: 12px;
+  line-height: 1;
+  text-transform: uppercase;
+  letter-spacing: 0;
+}
+
+h1,
+h2,
+p {
+  margin-top: 0;
+}
+
+h1 {
+  margin-bottom: 0;
+  font-size: clamp(28px, 4vw, 52px);
+  line-height: 0.95;
+  letter-spacing: 0;
+}
+
+h2 {
+  margin-bottom: 18px;
+  font-size: 22px;
+  line-height: 1.1;
+}
+
+.status-cluster {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.status-cluster span,
+.pot-display,
+.seat-pill,
+.panel,
+.notice {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  backdrop-filter: blur(18px);
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.3);
+}
+
+.status-cluster span {
+  border-radius: 999px;
+  padding: 9px 12px;
+  font-size: 12px;
+  color: #f8edd5;
+}
+
+.pot-display {
+  position: absolute;
+  left: 50%;
+  bottom: 28px;
+  transform: translateX(-50%);
+  display: grid;
+  gap: 2px;
+  min-width: 230px;
+  border-radius: 8px;
+  padding: 14px 18px;
+  text-align: center;
+}
+
+.pot-display span,
+.private-hand span,
+.wager-row span,
+label {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.2;
+}
+
+.pot-display strong {
+  font-size: 26px;
+  line-height: 1;
+}
+
+.pot-display small {
+  color: var(--green);
+}
+
+.control-dock {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 18px;
+  border-left: 1px solid rgba(232, 202, 128, 0.14);
+  background: rgba(3, 8, 7, 0.66);
+  overflow-y: auto;
+}
+
+.panel {
+  border-radius: 8px;
+  padding: 18px;
+}
+
+.panel label {
+  display: grid;
+  gap: 7px;
+  margin-bottom: 12px;
+}
+
+.primary-button {
+  width: 100%;
+  background: #e8ca80;
+  color: #15120b;
+  border-color: transparent;
+  font-weight: 800;
+}
+
+.ghost-button,
+.danger-button {
+  width: 100%;
+  margin-top: 10px;
+}
+
+.danger-button {
+  border-color: rgba(217, 109, 114, 0.35);
+  color: #ffd5d7;
+  background: rgba(217, 109, 114, 0.12);
+}
+
+.balance-line {
+  color: var(--green);
+}
+
+.join-row {
+  display: grid;
+  grid-template-columns: 1fr 84px;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.private-hand {
+  display: grid;
+  gap: 10px;
+}
+
+.card-pair {
+  display: flex;
+  gap: 10px;
+  min-height: 86px;
+  align-items: center;
+}
+
+.card-pair em {
+  color: var(--muted);
+}
+
+.card-view {
+  display: grid;
+  place-items: center;
+  width: 58px;
+  height: 80px;
+  border-radius: 8px;
+  background: #f8f0df;
+  color: #111816;
+  box-shadow: 0 12px 20px rgba(0, 0, 0, 0.28);
+}
+
+.card-view.red {
+  color: #ba2732;
+}
+
+.card-view strong {
+  font-size: 24px;
+  line-height: 1;
+}
+
+.card-view span {
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.action-bar {
+  display: grid;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.wager-row {
+  display: grid;
+  grid-template-columns: 52px 1fr 86px;
+  gap: 10px;
+  align-items: center;
+}
+
+.wager-row strong {
+  text-align: right;
+  font-size: 13px;
+}
+
+.action-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+
+.action-grid .all-in {
+  background: rgba(217, 109, 114, 0.16);
+  color: #ffd5d7;
+}
+
+.audio-panel {
+  display: grid;
+  gap: 12px;
+}
+
+.switch-line {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.toggle {
+  min-height: 34px;
+}
+
+.toggle.active {
+  background: rgba(117, 216, 181, 0.18);
+  color: #c9ffec;
+}
+
+.notice {
+  border-radius: 8px;
+  padding: 12px 14px;
+  color: #ffe1ae;
+}
+
+.seat-ring {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.seat-pill {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  width: min(180px, 21vw);
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+
+.seat-pill.local {
+  border-color: rgba(232, 202, 128, 0.65);
+}
+
+.seat-pill.folded {
+  opacity: 0.55;
+}
+
+.seat-main {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.seat-main strong,
+.seat-main span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.seat-meta {
+  margin-top: 4px;
+  color: var(--green);
+  font-size: 11px;
+}
+
+@media (max-width: 920px) {
+  body {
+    overflow: auto;
+  }
+
+  .app-shell {
+    grid-template-columns: 1fr;
+    min-height: 100vh;
+    height: auto;
+  }
+
+  .table-stage {
+    height: 64vh;
+    min-height: 520px;
+  }
+
+  .control-dock {
+    border-left: 0;
+    border-top: 1px solid rgba(232, 202, 128, 0.14);
+  }
+
+  .seat-pill {
+    width: 142px;
+  }
+}
+
+@media (max-width: 560px) {
+  .table-topbar {
+    left: 14px;
+    right: 14px;
+    top: 14px;
+  }
+
+  .status-cluster {
+    max-width: 170px;
+  }
+
+  .seat-pill {
+    width: 118px;
+    padding: 8px;
+  }
+
+  .seat-main {
+    display: grid;
+    gap: 2px;
+  }
+
+  .pot-display {
+    bottom: 12px;
+  }
+}

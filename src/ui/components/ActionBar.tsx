@@ -1,0 +1,53 @@
+import { useMemo, useState } from "react";
+import type { LegalAction, PokerActionPayload } from "../../../shared/types";
+
+type Props = {
+  legalActions: LegalAction[];
+  onAction: (action: PokerActionPayload) => void;
+};
+
+export function ActionBar({ legalActions, onAction }: Props) {
+  const [amount, setAmount] = useState(1000);
+  const byType = useMemo(() => new Map(legalActions.map((action) => [action.type, action])), [legalActions]);
+  const wager = byType.get("bet") ?? byType.get("raise") ?? byType.get("all-in");
+  const min = wager?.minAmount ?? 0;
+  const max = wager?.maxAmount ?? 0;
+
+  return (
+    <div className="action-bar">
+      <div className="wager-row">
+        <span>Wager</span>
+        <input
+          type="range"
+          min={min}
+          max={Math.max(min, max)}
+          step="500"
+          value={Math.min(Math.max(amount, min), Math.max(min, max))}
+          disabled={!wager || max <= 0}
+          onChange={(event) => setAmount(Number(event.target.value))}
+        />
+        <strong>{Math.min(Math.max(amount, min), Math.max(min, max)).toLocaleString()}</strong>
+      </div>
+      <div className="action-grid">
+        <button disabled={!byType.has("fold")} onClick={() => onAction({ type: "fold" })}>
+          Fold
+        </button>
+        <button disabled={!byType.has("check")} onClick={() => onAction({ type: "check" })}>
+          Check
+        </button>
+        <button disabled={!byType.has("call")} onClick={() => onAction({ type: "call" })}>
+          {byType.get("call")?.callAmount ? `Call ${byType.get("call")?.callAmount?.toLocaleString()}` : "Call"}
+        </button>
+        <button disabled={!byType.has("bet")} onClick={() => onAction({ type: "bet", amount })}>
+          Bet
+        </button>
+        <button disabled={!byType.has("raise")} onClick={() => onAction({ type: "raise", amount })}>
+          Raise
+        </button>
+        <button className="all-in" disabled={!byType.has("all-in")} onClick={() => onAction({ type: "all-in" })}>
+          All in
+        </button>
+      </div>
+    </div>
+  );
+}
