@@ -71,6 +71,34 @@ input {
   overflow: hidden;
 }
 
+.hero-mode canvas {
+  opacity: 0.22;
+}
+
+.hero-art {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.hero-art::after {
+  position: absolute;
+  inset: 0;
+  content: "";
+  background:
+    linear-gradient(90deg, rgba(7, 17, 15, 0.92) 0%, rgba(7, 17, 15, 0.56) 38%, rgba(7, 17, 15, 0.06) 100%),
+    linear-gradient(0deg, rgba(7, 17, 15, 0.72) 0%, rgba(7, 17, 15, 0) 42%);
+}
+
+.hero-art img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center right;
+  filter: saturate(1.03) contrast(1.04);
+}
+
 .table-topbar {
   position: absolute;
   left: 28px;
@@ -80,6 +108,30 @@ input {
   justify-content: space-between;
   align-items: flex-start;
   pointer-events: none;
+}
+
+.brand-lockup {
+  display: grid;
+  grid-template-columns: 46px minmax(0, 1fr);
+  column-gap: 12px;
+  align-items: center;
+  max-width: min(620px, 64vw);
+}
+
+.brand-lockup h1,
+.brand-lockup .micro-label {
+  grid-column: 2;
+}
+
+.brand-mark {
+  grid-row: 1 / span 2;
+  width: 46px;
+  height: 46px;
+  border: 1px solid rgba(232, 202, 128, 0.52);
+  border-radius: 8px;
+  object-fit: cover;
+  object-position: 72% 38%;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.36);
 }
 
 .micro-label {
@@ -129,10 +181,33 @@ h2 {
 }
 
 .status-cluster span {
+  display: inline-flex;
+  align-items: center;
   border-radius: 999px;
   padding: 9px 12px;
   font-size: 12px;
   color: #f8edd5;
+}
+
+.balance-amount {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: #f8edd5;
+  font-weight: 800;
+  letter-spacing: 0;
+}
+
+.chip-icon {
+  width: 17px;
+  height: 17px;
+  color: #e8ca80;
+  fill: rgba(232, 202, 128, 0.18);
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  flex: 0 0 auto;
 }
 
 .pot-display {
@@ -208,7 +283,8 @@ label {
 }
 
 .balance-line {
-  color: var(--green);
+  display: inline-flex;
+  margin-bottom: 16px;
 }
 
 .join-row {
@@ -299,13 +375,28 @@ label {
   justify-content: space-between;
 }
 
-.toggle {
-  min-height: 34px;
+.icon-toggle {
+  display: inline-grid;
+  place-items: center;
+  width: 42px;
+  height: 38px;
+  min-height: 38px;
+  padding: 0;
 }
 
-.toggle.active {
+.icon-toggle.active {
   background: rgba(117, 216, 181, 0.18);
   color: #c9ffec;
+}
+
+.speaker-icon {
+  width: 21px;
+  height: 21px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 .notice {
@@ -372,6 +463,10 @@ label {
     min-height: 520px;
   }
 
+  .hero-art img {
+    object-position: 70% center;
+  }
+
   .control-dock {
     border-left: 0;
     border-top: 1px solid rgba(232, 202, 128, 0.14);
@@ -389,8 +484,41 @@ label {
     top: 14px;
   }
 
+  .brand-lockup {
+    grid-template-columns: 38px minmax(0, 1fr);
+    column-gap: 9px;
+    max-width: 220px;
+  }
+
+  .brand-mark {
+    width: 38px;
+    height: 38px;
+  }
+
   .status-cluster {
-    max-width: 170px;
+    max-width: 144px;
+  }
+
+  .hero-mode .table-topbar {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+    text-shadow: 0 2px 18px rgba(0, 0, 0, 0.56);
+  }
+
+  .hero-mode .status-cluster {
+    justify-content: flex-start;
+    max-width: none;
+  }
+
+  .hero-art::after {
+    background:
+      linear-gradient(90deg, rgba(7, 17, 15, 0.86) 0%, rgba(7, 17, 15, 0.38) 55%, rgba(7, 17, 15, 0.08) 100%),
+      linear-gradient(0deg, rgba(7, 17, 15, 0.78) 0%, rgba(7, 17, 15, 0.08) 52%);
+  }
+
+  .hero-art img {
+    object-position: 64% center;
   }
 
   .seat-pill {

@@ -68,17 +68,23 @@ export function App() {
 
   return (
     <main className="app-shell">
-      <section className="table-stage" aria-label="Poker table">
+      <section className={player ? "table-stage" : "table-stage hero-mode"} aria-label="Poker table">
         <PokerTableScene room={room} playerSeat={player?.seatIndex ?? null} />
+        {!player ? (
+          <div className="hero-art" aria-hidden="true">
+            <img src="/assets/house-of-cards-croupier.png" alt="" />
+          </div>
+        ) : null}
         {room ? <SeatRing room={room} localUserId={player?.userId ?? ""} /> : null}
         <div className="table-topbar">
-          <div>
+          <div className="brand-lockup">
+            <img className="brand-mark" src="/assets/house-of-cards-croupier.png" alt="" />
             <p className="micro-label">House of Cards</p>
             <h1>{room ? `Room ${room.roomCode}` : "Online Poker"}</h1>
           </div>
           <div className="status-cluster">
             <span>{room ? room.street.toUpperCase() : "LOBBY"}</span>
-            <span>{player ? `${player.accountBalance.toLocaleString()} chips` : "No account"}</span>
+            <span>{player ? <BalanceAmount amount={player.accountBalance} /> : "No account"}</span>
           </div>
         </div>
         {room ? (
@@ -115,7 +121,9 @@ export function App() {
         ) : !room ? (
           <div className="panel">
             <h2>Lobby</h2>
-            <p className="balance-line">{player.accountBalance.toLocaleString()} persistent chips</p>
+            <p className="balance-line">
+              <BalanceAmount amount={player.accountBalance} />
+            </p>
             <button className="primary-button" onClick={createRoom}>
               Create room
             </button>
@@ -148,8 +156,13 @@ export function App() {
         <div className="panel audio-panel">
           <div className="switch-line">
             <span>SFX</span>
-            <button className={soundEnabled ? "toggle active" : "toggle"} onClick={() => setSoundEnabled((value) => !value)}>
-              {soundEnabled ? "On" : "Off"}
+            <button
+              className={soundEnabled ? "icon-toggle active" : "icon-toggle"}
+              onClick={() => setSoundEnabled((value) => !value)}
+              aria-label={soundEnabled ? "Mute SFX" : "Unmute SFX"}
+              title={soundEnabled ? "Mute SFX" : "Unmute SFX"}
+            >
+              <SpeakerIcon muted={!soundEnabled} />
             </button>
           </div>
           <input
@@ -165,6 +178,43 @@ export function App() {
         {notice ? <div className="notice">{notice}</div> : null}
       </aside>
     </main>
+  );
+}
+
+function BalanceAmount({ amount }: { amount: number }) {
+  return (
+    <span className="balance-amount">
+      ${amount.toLocaleString()}
+      <ChipIcon />
+    </span>
+  );
+}
+
+function ChipIcon() {
+  return (
+    <svg className="chip-icon" viewBox="0 0 24 24" aria-hidden="true">
+      <circle cx="12" cy="12" r="9" />
+      <circle cx="12" cy="12" r="4.1" />
+      <path d="M12 3v4M12 17v4M3 12h4M17 12h4M5.6 5.6l2.8 2.8M15.6 15.6l2.8 2.8M18.4 5.6l-2.8 2.8M8.4 15.6l-2.8 2.8" />
+    </svg>
+  );
+}
+
+function SpeakerIcon({ muted }: { muted: boolean }) {
+  return (
+    <svg className="speaker-icon" viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M4 9.5v5h4l5 4.2V5.3l-5 4.2H4Z" />
+      {muted ? (
+        <>
+          <path d="M17 9l4 6M21 9l-4 6" />
+        </>
+      ) : (
+        <>
+          <path d="M16.5 9a4.2 4.2 0 0 1 0 6" />
+          <path d="M18.8 6.8a7.4 7.4 0 0 1 0 10.4" />
+        </>
+      )}
+    </svg>
   );
 }
 
