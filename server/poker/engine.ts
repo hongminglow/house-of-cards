@@ -59,7 +59,7 @@ export type HandRecord = {
 
 export type RoomEvent =
   | { type: "none" }
-  | { type: "sfx"; name: "deal" | "card" | "chip" | "chips-fly" | "check" | "fold" | "all-in" | "winner" }
+  | { type: "sfx"; name: "deal" | "card" | "chip" | "call" | "raise" | "chips-fly" | "check" | "fold" | "all-in" | "winner" }
   | { type: "settled"; record: HandRecord };
 
 export type LeaveResult = {
@@ -230,7 +230,7 @@ export class PokerRoom {
         this.commit(seat, callAmount);
         seat.actedThisStreet = true;
         this.lastAction = `${seat.displayName} called ${callAmount.toLocaleString()}`;
-        event = { type: "sfx", name: "chip" };
+        event = { type: "sfx", name: "call" };
         break;
       case "bet":
       case "raise": {
@@ -247,7 +247,7 @@ export class PokerRoom {
         });
         seat.actedThisStreet = true;
         this.lastAction = `${seat.displayName} ${action.type === "bet" ? "bet" : "raised to"} ${targetBet.toLocaleString()}`;
-        event = { type: "sfx", name: "chip" };
+        event = { type: "sfx", name: "raise" };
         break;
       }
       case "all-in": {

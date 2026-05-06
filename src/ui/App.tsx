@@ -26,6 +26,17 @@ type RoomListItem = {
 const serverUrl =
   import.meta.env.VITE_SERVER_URL || (window.location.port === "5173" ? "http://127.0.0.1:8787" : window.location.origin);
 
+const sfxAssets: Partial<Record<SfxName, string>> = {
+  deal: "/assets/sfx/poker-shuffle.mp3",
+  card: "/assets/sfx/poker-draw-card.mp3",
+  check: "/assets/sfx/poker-check.mp3",
+  call: "/assets/sfx/poker-call.mp3",
+  chip: "/assets/sfx/poker-raise.mp3",
+  raise: "/assets/sfx/poker-raise.mp3",
+  "all-in": "/assets/sfx/poker-raise.mp3",
+  "chips-fly": "/assets/sfx/poker-settlement-chips.mp3"
+};
+
 const gameSocket: GameSocket = io(serverUrl, { autoConnect: false, transports: ["websocket"] });
 
 export function App() {
@@ -136,7 +147,23 @@ export function App() {
   }, []);
 
   function auth(payload: AuthPayload) {
-    socket.emit("auth", payload, setSnapshot);
+    const nextEmail = payload.email.trim();
+    const nextDisplayName = payload.displayName?.trim() ?? "";
+    if (!nextEmail) {
+      setNotice("Enter your email.");
+      return;
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(nextEmail)) {
+      setNotice("Invalid email format.");
+      return;
+    }
+    if (!nextDisplayName) {
+      setNotice("Enter a table name.");
+      return;
+    }
+
+    setNotice("");
+    socket.emit("auth", { email: nextEmail, displayName: nextDisplayName }, setSnapshot);
   }
 
   function createRoom() {
@@ -176,6 +203,7 @@ export function App() {
         <section className="login-center">
           <form
             className="panel login-panel"
+            noValidate
             onSubmit={(event) => {
               event.preventDefault();
               auth({ email, displayName });
@@ -802,6 +830,12 @@ function formatSignedCurrency(value: number) {
 }
 
 function playSfx(name: SfxName, volume: number, ref: React.MutableRefObject<AudioContext | null>) {
+  const asset = sfxAssets[name];
+  if (asset) {
+    playAudioAsset(asset, volume);
+    return;
+  }
+
   const AudioContextClass = window.AudioContext || window.webkitAudioContext;
   ref.current ??= new AudioContextClass();
   const ctx = ref.current;
@@ -825,6 +859,8 @@ function playSfx(name: SfxName, volume: number, ref: React.MutableRefObject<Audi
     deal: [520, 0.08],
     card: [520, 0.08],
     chip: [280, 0.1],
+    call: [300, 0.1],
+    raise: [340, 0.12],
     "chips-fly": [520, 0.2],
     check: [360, 0.07],
     fold: [160, 0.12],
@@ -843,6 +879,12 @@ function playSfx(name: SfxName, volume: number, ref: React.MutableRefObject<Audi
   osc.start();
   gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + duration);
   osc.stop(ctx.currentTime + duration);
+}
+
+function playAudioAsset(url: string, volume: number) {
+  const clip = new Audio(url);
+  clip.volume = Math.min(1, Math.max(0, volume));
+  void clip.play().catch(() => undefined);
 }
 
 function playCardDraw(ctx: AudioContext, volume: number, offset = 0) {

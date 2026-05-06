@@ -20,8 +20,8 @@ type SocketData = {
 };
 
 const authSchema = z.object({
-  email: z.string().email(),
-  displayName: z.string().min(1).max(24).optional()
+  email: z.string().trim().email("Invalid email format."),
+  displayName: z.string().trim().min(1, "Enter a table name.").max(24, "Table name must be 24 characters or fewer.").optional()
 });
 
 const joinSchema = z.object({
@@ -307,5 +307,12 @@ function emptySnapshot(user: StoredUser): GameSnapshot {
 }
 
 function getErrorMessage(error: unknown): string {
+  if (error instanceof z.ZodError) {
+    const issue = error.issues[0];
+    if (issue?.path[0] === "email") return "Invalid email format.";
+    if (issue?.path[0] === "displayName") return issue.message;
+    if (issue?.path[0] === "roomCode") return "Enter a valid room number.";
+    return issue?.message ?? "Check your input and try again.";
+  }
   return error instanceof Error ? error.message : "Something went wrong.";
 }

@@ -110,6 +110,8 @@ export type SfxName =
   | "deal"
   | "card"
   | "chip"
+  | "call"
+  | "raise"
   | "chips-fly"
   | "check"
   | "fold"
