@@ -28,23 +28,32 @@ export function SeatRing({ room, localUserId }: Props) {
             <span>{seat.stack.toLocaleString()}</span>
           </div>
           <div className="seat-meta">
-            {seat.isDealer ? "D " : ""}
-            {seat.isSmallBlind ? "SB " : ""}
-            {seat.isBigBlind ? "BB " : ""}
-            {seat.currentBet
-              ? `Bet ${seat.currentBet.toLocaleString()}`
-              : seat.isAllIn
-                ? "All in"
-                : seat.hasCards
-                  ? "In hand"
-                  : !seat.isConnected
-                    ? "Away"
-                    : seat.isReady
-                      ? "In game"
-                      : "Waiting"}
+            {seatStatusLabel(seat)}
           </div>
         </div>
       ))}
     </div>
   );
+}
+
+function seatStatusLabel(seat: RoomPublicState["seats"][number]) {
+  const roles = [
+    seat.isDealer ? "Dealer" : "",
+    seat.isSmallBlind ? "Small bet" : "",
+    seat.isBigBlind ? "Big bet" : ""
+  ].filter(Boolean);
+
+  const state = seat.currentBet
+    ? `$${seat.currentBet.toLocaleString()} bet`
+    : seat.isAllIn
+      ? "All in"
+      : seat.hasCards
+        ? "In hand"
+        : !seat.isConnected
+          ? "Away"
+          : seat.isReady
+            ? "In game"
+            : "Waiting";
+
+  return roles.length ? `${roles.join(" / ")} · ${state}` : state;
 }

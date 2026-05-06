@@ -137,4 +137,20 @@ describe("poker room", () => {
     expect(returnedStacks[0].userId).toBe(timedOutUser);
     expect(room.publicState().seats.some((seat) => seat.userId === timedOutUser)).toBe(false);
   });
+
+  it("removes a leaving player from the public room count during an active hand", () => {
+    const room = new PokerRoom("TEST06");
+    room.join(user(1));
+    room.join(user(2));
+    room.ready("u1");
+    room.ready("u2");
+
+    const leavingUser = room.publicState().seats.find((seat) => seat.seatIndex === room.publicState().currentTurnSeat)!.userId;
+    const result = room.leave(leavingUser);
+
+    expect(result.returned).toBeNull();
+    expect(room.publicState().seats).toHaveLength(1);
+    expect(room.publicState().seats.some((seat) => seat.userId === leavingUser)).toBe(false);
+    expect(room.publicState().street).toBe("settled");
+  });
 });

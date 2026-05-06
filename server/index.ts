@@ -192,10 +192,11 @@ async function leave(socket: Parameters<typeof io.on>[1] extends (socket: infer 
   const room = rooms.get(roomCode);
   if (!room) return;
 
-  const returned = room.leave(user.id);
-  if (returned) {
-    socket.data.user = await store.adjustBalance(user.id, returned.delta);
+  const result = room.leave(user.id);
+  if (result.returned) {
+    socket.data.user = await store.adjustBalance(user.id, result.returned.delta);
   }
+  await handleEvent(room, result.event);
   await socket.leave(roomCode);
   await presence.removeRoomUser(room.code, user.id).catch(() => undefined);
   socket.data.roomCode = undefined;

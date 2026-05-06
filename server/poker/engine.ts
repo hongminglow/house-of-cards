@@ -62,6 +62,11 @@ export type RoomEvent =
   | { type: "sfx"; name: "deal" | "chip" | "check" | "fold" | "all-in" | "winner" }
   | { type: "settled"; record: HandRecord };
 
+export type LeaveResult = {
+  returned: SettlementDelta | null;
+  event: RoomEvent;
+};
+
 export class PokerRoom {
   readonly code: string;
   readonly maxPlayers = MAX_PLAYERS;
@@ -126,16 +131,37 @@ export class PokerRoom {
     return seat;
   }
 
-  leave(userId: string): SettlementDelta | null {
+  leave(userId: string): LeaveResult {
     const seat = this.findSeatByUser(userId);
-    if (!seat) return null;
+    if (!seat) return { returned: null, event: { type: "none" } };
 
     if (this.street !== "waiting" && this.street !== "settled") {
+      const wasCurrentTurn = this.currentTurnSeat === seat.seatIndex;
       seat.isConnected = false;
       seat.isReady = false;
       seat.leaveAfterHand = true;
-      this.lastAction = `${seat.displayName} will leave after this hand`;
-      return null;
+
+      if (seat.holeCards.length > 0 && !seat.hasFolded) {
+        seat.hasFolded = true;
+        seat.actedThisStreet = true;
+        this.lastAction = `${seat.displayName} left and folded`;
+
+        if (this.contenders().length === 1) {
+          return {
+            returned: null,
+            event: this.settle([{ seat: this.contenders()[0], amount: this.pot(), handName: "Uncontested" }])
+          };
+        }
+
+        if (wasCurrentTurn) {
+          return { returned: null, event: this.progressAfterAction() ?? { type: "sfx", name: "fold" } };
+        }
+
+        return { returned: null, event: { type: "sfx", name: "fold" } };
+      }
+
+      this.lastAction = `${seat.displayName} left the table`;
+      return { returned: null, event: { type: "none" } };
     }
 
     this.seats.delete(seat.seatIndex);
@@ -143,9 +169,12 @@ export class PokerRoom {
     seat.accountBalance += delta;
     this.lastAction = `${seat.displayName} left the room`;
     return {
-      userId: seat.userId,
-      delta,
-      resultingStack: 0
+      returned: {
+        userId: seat.userId,
+        delta,
+        resultingStack: 0
+      },
+      event: { type: "none" }
     };
   }
 
@@ -322,7 +351,7 @@ export class PokerRoom {
   }
 
   publicState(): RoomPublicState {
-    const seats = [...this.seats.values()].sort((a, b) => a.seatIndex - b.seatIndex).map((seat) => this.toPublicSeat(seat));
+    const seats = this.publicSeats().map((seat) => this.toPublicSeat(seat));
     return {
       roomCode: this.code,
       maxPlayers: this.maxPlayers,
@@ -550,6 +579,10 @@ export class PokerRoom {
 
   private readySeats(): SeatState[] {
     return this.activeSeats().filter((seat) => seat.isReady && seat.isConnected && seat.stack > 0 && !seat.leaveAfterHand);
+  }
+
+  private publicSeats(): SeatState[] {
+    return this.activeSeats().filter((seat) => !seat.leaveAfterHand);
   }
 
   private contenders(): SeatState[] {

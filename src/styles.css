@@ -560,23 +560,6 @@ input:disabled {
   box-shadow: 0 10px 18px rgba(0, 0, 0, 0.24);
 }
 
-.rule-card-samples .card-corner {
-  top: 4px;
-  left: 4px;
-}
-
-.rule-card-samples .card-corner.bottom {
-  inset: auto 4px 4px auto;
-}
-
-.rule-card-samples .card-corner strong {
-  font-size: 11px;
-}
-
-.rule-card-samples .card-center {
-  inset: 15px 9px;
-}
-
 .game-shell {
   height: 100vh;
   overflow: hidden;
@@ -1030,123 +1013,107 @@ label {
   height: 80px;
   border-radius: 8px;
   overflow: hidden;
-  border: 1px solid rgba(28, 23, 18, 0.16);
-  background:
-    radial-gradient(circle at 50% 42%, rgba(255, 255, 255, 0.72), transparent 44%),
-    linear-gradient(145deg, #fffaf0, #eee2cd);
+  border: 1px solid rgba(28, 23, 18, 0.2);
+  background: #fffaf0;
   color: #111816;
-  box-shadow: 0 12px 20px rgba(0, 0, 0, 0.28), inset 0 0 0 2px rgba(255, 255, 255, 0.44);
+  box-shadow: 0 12px 20px rgba(0, 0, 0, 0.28), inset 0 0 0 1px rgba(255, 255, 255, 0.58);
 }
 
 .card-view.red {
   color: #ba2732;
 }
 
-.card-corner {
-  position: absolute;
-  top: 5px;
-  left: 5px;
-  display: grid;
-  justify-items: center;
-  gap: 1px;
-  z-index: 2;
+.playing-card-svg {
+  width: 100%;
+  height: 100%;
+  display: block;
 }
 
-.card-corner.bottom {
-  inset: auto 5px 5px auto;
-  transform: rotate(180deg);
+.card-paper {
+  fill: #fffaf0;
 }
 
-.card-corner strong {
-  font-size: 13px;
-  line-height: 1;
+.card-inner-line {
+  fill: none;
+  stroke: rgba(28, 23, 18, 0.14);
+  stroke-width: 1.2;
+}
+
+.card-index-rank,
+.court-rank-mark {
+  fill: currentColor;
+  font-family: Georgia, "Times New Roman", serif;
   font-weight: 900;
   letter-spacing: 0;
 }
 
-.suit-mark {
-  width: 10px;
-  height: 10px;
+.card-index-rank {
+  font-size: 17px;
+  dominant-baseline: central;
+}
+
+.suit-pip {
   fill: currentColor;
-  flex: 0 0 auto;
 }
 
-.card-center {
-  position: absolute;
-  inset: 16px 10px;
-  display: grid;
-  place-items: center;
+.court-frame {
+  fill: #f4e5c8;
+  stroke: rgba(28, 23, 18, 0.28);
+  stroke-width: 1.4;
 }
 
-.pip-layout {
-  position: relative;
+.court-rail,
+.court-line,
+.court-cloak-trim {
+  fill: none;
+  stroke: #111816;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.court-rail {
+  stroke-width: 1.6;
+  opacity: 0.42;
+}
+
+.court-line {
+  stroke-width: 1.25;
+}
+
+.court-cloak-trim {
+  stroke-width: 2;
+  opacity: 0.62;
+}
+
+.court-crown {
+  stroke: #775117;
+  stroke-width: 1.1;
+}
+
+.court-face-skin {
+  fill: #f0c49f;
+  stroke: rgba(28, 23, 18, 0.18);
+  stroke-width: 1;
+}
+
+.court-rank-mark {
+  font-size: 25px;
+  paint-order: stroke;
+  stroke: #f4e5c8;
+  stroke-width: 3px;
+}
+
+.table-card-face {
+  width: 64px;
+  height: 90px;
+  pointer-events: none;
+}
+
+.table-card-face .card-view {
   width: 100%;
   height: 100%;
-}
-
-.pip-position {
-  position: absolute;
-  display: grid;
-  place-items: center;
-  width: 12px;
-  height: 12px;
-}
-
-.pip-position .suit-mark {
-  width: 12px;
-  height: 12px;
-}
-
-.ace-layout .pip-position {
-  width: 20px;
-  height: 20px;
-}
-
-.ace-layout .suit-mark {
-  width: 20px;
-  height: 20px;
-}
-
-.pip-position.inverted .suit-mark {
-  transform: rotate(180deg);
-}
-
-.rule-card-samples .pip-position,
-.rule-card-samples .pip-position .suit-mark {
-  width: 9px;
-  height: 9px;
-}
-
-.rule-card-samples .ace-layout .pip-position,
-.rule-card-samples .ace-layout .suit-mark {
-  width: 16px;
-  height: 16px;
-}
-
-.card-view.court-glyph-card {
-  overflow: hidden;
-  border: 1px solid rgba(28, 23, 18, 0.16);
-  background:
-    radial-gradient(circle at 50% 42%, rgba(255, 255, 255, 0.72), transparent 44%),
-    linear-gradient(145deg, #fffaf0, #eee2cd);
-  box-shadow: 0 12px 20px rgba(0, 0, 0, 0.28), inset 0 0 0 2px rgba(255, 255, 255, 0.44);
-}
-
-.court-card-glyph {
-  display: block;
-  width: 100%;
-  height: 100%;
-  font-family: "Segoe UI Symbol", "Noto Sans Symbols 2", "Apple Symbols", "DejaVu Sans", serif;
-  font-size: 82px;
-  line-height: 0.94;
-  text-align: center;
-  letter-spacing: 0;
-  filter: drop-shadow(0 12px 18px rgba(0, 0, 0, 0.28));
-}
-
-.rule-card-samples .court-card-glyph {
-  font-size: 72px;
-  line-height: 0.94;
+  border-radius: 7px;
+  box-shadow: 0 10px 18px rgba(0, 0, 0, 0.32);
 }
 
 .action-bar {
@@ -1473,10 +1440,6 @@ label {
   .game-hand-panel .card-view {
     width: 48px;
     height: 66px;
-  }
-
-  .game-hand-panel .court-card-glyph {
-    font-size: 68px;
   }
 
   .game-action-panel {

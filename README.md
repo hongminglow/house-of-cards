@@ -10,7 +10,7 @@ The product goal is a casino-style poker room with a polished game HUD, readable
 - Persistent bankroll display using game currency formatting and chip iconography.
 - Lobby page with room creation, quick join, direct room-code join, open-room list, player summary, featured table, and career pulse panels.
 - Full-screen game page with compact edge HUDs so the 3D table remains the focus.
-- No-limit Texas Hold'em flow with blinds, preflop, flop, turn, river, showdown, side pots, split pots, and settlement.
+- No-limit Texas Hold'em flow with opening forced bets, preflop, flop, turn, river, showdown, side pots, split pots, and settlement.
 - Private hole cards per socket; other players only expose public card presence.
 - Poker rules modal available in the lobby and game room, including hand rankings and regular playing-card samples.
 - SFX for deal, chip, check, fold, all-in, winner, join, leave, and warning events, with speaker/mute icon controls.
@@ -28,7 +28,7 @@ The product goal is a casino-style poker room with a polished game HUD, readable
 4. Sitting at a table deducts the fixed 100,000 buy-in from the account balance and places it into the table stack.
 5. The player presses `Ready` once after entering the room. After that, they are considered in the game until they leave, disconnect, run out of table stack, or time out.
 6. A hand starts when at least 2 connected seated players are in the game.
-7. The server posts blinds, shuffles and deals hole cards, chooses turn order, and sends each player a private snapshot.
+7. The server posts the opening forced bets, shuffles and deals hole cards, chooses turn order, and sends each player a private snapshot.
 8. On each turn, the player can fold, check, call, bet, raise, or go all-in depending on the server-validated legal action set.
 9. Each turn has a timer. If the player does not act before timeout, the server folds them, marks them out of the game, and releases their seat after the hand settles.
 10. The hand progresses through preflop, flop, turn, river, and showdown, or ends early when only one contender remains.

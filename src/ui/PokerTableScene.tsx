@@ -1,9 +1,10 @@
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { Environment, Float, OrbitControls, Text, useGLTF } from "@react-three/drei";
+import { Environment, Float, Html, OrbitControls, useGLTF } from "@react-three/drei";
 import { Suspense, useEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
 import { clone as cloneSkeleton } from "three/examples/jsm/utils/SkeletonUtils.js";
 import type { RoomPublicState } from "../../shared/types";
+import { CardView } from "./components/CardView";
 
 type Props = {
   room: RoomPublicState | null;
@@ -348,16 +349,11 @@ function CommunityCards({ room }: { room: RoomPublicState | null }) {
               <meshStandardMaterial color={card ? "#f8f2df" : "#1f5f50"} roughness={0.52} />
             </mesh>
             {card ? (
-              <Text
-                position={[0, 0.03, 0]}
-                rotation-x={-Math.PI / 2}
-                fontSize={0.2}
-                color={card.suit === "hearts" || card.suit === "diamonds" ? "#ba2732" : "#111816"}
-                anchorX="center"
-                anchorY="middle"
-              >
-                {card.rank}
-              </Text>
+              <Html distanceFactor={4.2} position={[0, 0.06, 0]} rotation={[-Math.PI / 2, 0, 0]} transform zIndexRange={[2, 0]}>
+                <div className="table-card-face">
+                  <CardView card={card} />
+                </div>
+              </Html>
             ) : null}
           </group>
         );

@@ -244,7 +244,7 @@ export function App() {
                 <strong>$100,000</strong>
               </div>
               <div className="promo-row">
-                <span>Blinds</span>
+                <span>Opening bets</span>
                 <strong>$500 / $1,000</strong>
               </div>
               <button className="ghost-button compact" onClick={createRoom}>
@@ -327,7 +327,7 @@ export function App() {
         <div className="game-room-panel edge-panel">
           <span>Table</span>
           <strong>{room.seats.length}/6 seated</strong>
-          <small>Blinds ${room.smallBlind.toLocaleString()} / ${room.bigBlind.toLocaleString()}</small>
+          <small>Opening bets ${room.smallBlind.toLocaleString()} / ${room.bigBlind.toLocaleString()}</small>
         </div>
 
         {notice ? <div className="notice game-notice">{notice}</div> : null}
