@@ -413,7 +413,7 @@ export class PokerRoom {
     this.currentTurnSeat = this.nextActionableSeat(this.bigBlindSeat);
     this.armTimer();
     this.lastAction = `Hand ${this.handNumber} started`;
-    return { type: "sfx", name: "card" };
+    return { type: "sfx", name: "deal" };
   }
 
   private progressAfterAction(): RoomEvent | null {
@@ -459,7 +459,7 @@ export class PokerRoom {
     this.currentTurnSeat = this.nextActionableSeat(this.dealerSeat);
     this.armTimer();
     this.lastAction = `${this.street.toUpperCase()} dealt`;
-    return { type: "sfx", name: "card" };
+    return { type: "none" };
   }
 
   private showdown(): RoomEvent {

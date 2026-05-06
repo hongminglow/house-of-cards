@@ -134,13 +134,7 @@ io.on("connection", (socket) => {
   });
 
   socket.on("disconnect", async () => {
-    const user = socket.data.user;
-    const room = socket.data.roomCode ? rooms.get(socket.data.roomCode) : undefined;
-    if (user && room) {
-      room.disconnect(user.id);
-      await presence.removeRoomUser(room.code, user.id).catch(() => undefined);
-      emitRoom(room);
-    }
+    await leave(socket, { emitSelf: false });
   });
 });
 
@@ -184,7 +178,11 @@ async function sit(socket: Parameters<typeof io.on>[1] extends (socket: infer T)
   await presence.setRoomUser(room.code, user.id).catch(() => undefined);
 }
 
-async function leave(socket: Parameters<typeof io.on>[1] extends (socket: infer T) => void ? T : never): Promise<void> {
+async function leave(
+  socket: Parameters<typeof io.on>[1] extends (socket: infer T) => void ? T : never,
+  options: { emitSelf?: boolean } = {}
+): Promise<void> {
+  const emitSelf = options.emitSelf ?? true;
   const user = socket.data.user;
   const roomCode = socket.data.roomCode;
   if (!user || !roomCode) return;
@@ -200,7 +198,9 @@ async function leave(socket: Parameters<typeof io.on>[1] extends (socket: infer 
   await socket.leave(roomCode);
   await presence.removeRoomUser(room.code, user.id).catch(() => undefined);
   socket.data.roomCode = undefined;
-  socket.emit("snapshot", emptySnapshot(socket.data.user ?? user));
+  if (emitSelf) {
+    socket.emit("snapshot", emptySnapshot(socket.data.user ?? user));
+  }
   emitRoom(room);
   io.to(room.code).emit("sfx", "leave");
 

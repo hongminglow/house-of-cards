@@ -43,6 +43,7 @@ export function App() {
   const [gameSceneReady, setGameSceneReady] = useState(false);
   const audio = useRef<AudioContext | null>(null);
   const soundSettings = useRef({ enabled: soundEnabled, volume });
+  const previousBoardReveal = useRef<{ roomCode?: string; count: number }>({ count: 0 });
 
   const room = snapshot?.room ?? null;
   const player = snapshot?.player ?? null;
@@ -98,6 +99,29 @@ export function App() {
   useEffect(() => {
     setGameSceneReady(false);
   }, [room?.roomCode]);
+
+  useEffect(() => {
+    const roomCode = room?.roomCode;
+    const boardCount = room?.communityCards.length ?? 0;
+    const previous = previousBoardReveal.current;
+
+    if (previous.roomCode !== roomCode) {
+      previousBoardReveal.current = { roomCode, count: boardCount };
+      return;
+    }
+
+    if (boardCount > previous.count) {
+      const revealCount = boardCount - previous.count;
+      const settings = soundSettings.current;
+      if (settings.enabled) {
+        for (let index = 0; index < revealCount; index += 1) {
+          window.setTimeout(() => playSfx("card", settings.volume, audio), index * 90);
+        }
+      }
+    }
+
+    previousBoardReveal.current = { roomCode, count: boardCount };
+  }, [room?.roomCode, room?.communityCards.length]);
 
   const handleCroupierReady = useCallback(() => {
     setGameSceneReady(true);
@@ -165,10 +189,14 @@ export function App() {
             <button className="icon-toggle rules-button" onClick={() => setRulesOpen(true)} aria-label="Open poker rules" title="Poker rules">
               <RulesIcon />
             </button>
-            <button className="icon-toggle history-button" onClick={() => setHistoryOpen(true)} aria-label="Open game history" title="Game history">
-              <HistoryIcon />
-            </button>
-            <IconSoundButton soundEnabled={soundEnabled} setSoundEnabled={setSoundEnabled} />
+            <HistoryControl
+              emptyDescription="Join a room to see completed hands, revealed cards, and your table result."
+              entries={[]}
+              open={historyOpen}
+              playerUserId={player.userId}
+              setOpen={setHistoryOpen}
+            />
+            <IconSoundButton setSoundEnabled={setSoundEnabled} setVolume={setVolume} soundEnabled={soundEnabled} volume={volume} />
           </div>
         </header>
 
@@ -302,7 +330,13 @@ export function App() {
             <button className="icon-toggle rules-button" onClick={() => setRulesOpen(true)} aria-label="Open poker rules" title="Poker rules">
               <RulesIcon />
             </button>
-            <IconSoundButton soundEnabled={soundEnabled} setSoundEnabled={setSoundEnabled} />
+            <HistoryControl
+              entries={room.history}
+              open={historyOpen}
+              playerUserId={player.userId}
+              setOpen={setHistoryOpen}
+            />
+            <IconSoundButton setSoundEnabled={setSoundEnabled} setVolume={setVolume} soundEnabled={soundEnabled} volume={volume} />
           </div>
         </div>
 
@@ -346,7 +380,6 @@ export function App() {
         {notice ? <div className="notice game-notice">{notice}</div> : null}
         {!gameSceneReady ? <GameLoadingOverlay /> : null}
         {rulesOpen ? <RulesModal onClose={() => setRulesOpen(false)} /> : null}
-        {historyOpen ? <HistoryModal entries={room.history} playerUserId={player.userId} onClose={() => setHistoryOpen(false)} /> : null}
       </section>
     </main>
   );
@@ -552,38 +585,53 @@ function RulesModal({ onClose }: { onClose: () => void }) {
   );
 }
 
-function HistoryModal({
+function HistoryControl({
+  emptyDescription = "Finished rounds will appear here with winners, revealed cards, and your result.",
   entries,
+  open,
   playerUserId,
-  onClose
+  setOpen
 }: {
+  emptyDescription?: string;
   entries: HandHistoryEntry[];
+  open: boolean;
   playerUserId: string;
-  onClose: () => void;
+  setOpen: Dispatch<SetStateAction<boolean>>;
 }) {
   return (
-    <div className="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="history-title">
-      <div className="rules-modal history-modal">
-        <div className="modal-heading">
-          <div>
-            <p className="micro-label">Table log</p>
-            <h2 id="history-title">Game history</h2>
-          </div>
-          <button className="icon-toggle" onClick={onClose} aria-label="Close history" title="Close history">
-            <CloseIcon />
-          </button>
-        </div>
-        <div className="history-content">
-          {entries.length ? (
-            entries.map((entry) => <HistoryEntryRow entry={entry} key={entry.handNumber} playerUserId={playerUserId} />)
-          ) : (
-            <div className="empty-history">
-              <strong>No completed hands yet</strong>
-              <span>Finished rounds will appear here with winners, revealed cards, and your result.</span>
+    <div className="history-control">
+      <button
+        className={open ? "icon-toggle history-button active" : "icon-toggle history-button"}
+        onClick={() => setOpen((value) => !value)}
+        aria-expanded={open}
+        aria-label="Open game history"
+        title="Game history"
+      >
+        <HistoryIcon />
+      </button>
+      {open ? (
+        <div className="history-popover" role="dialog" aria-label="Game history">
+          <div className="history-popover-heading">
+            <div>
+              <p className="micro-label">Table log</p>
+              <h2>Game history</h2>
             </div>
-          )}
+            <button className="icon-toggle" onClick={() => setOpen(false)} aria-label="Close history" title="Close history">
+              <CloseIcon />
+            </button>
+          </div>
+          <div className="history-content">
+            {entries.length ? (
+              entries.map((entry) => <HistoryEntryRow entry={entry} key={entry.handNumber} playerUserId={playerUserId} />)
+            ) : (
+              <div className="empty-history">
+                <strong>No completed hands yet</strong>
+                <span>{emptyDescription}</span>
+              </div>
+            )}
+          </div>
         </div>
-      </div>
+      ) : null}
     </div>
   );
 }
@@ -638,20 +686,42 @@ function HistoryEntryRow({ entry, playerUserId }: { entry: HandHistoryEntry; pla
 
 function IconSoundButton({
   soundEnabled,
-  setSoundEnabled
+  setSoundEnabled,
+  volume,
+  setVolume
 }: {
   soundEnabled: boolean;
   setSoundEnabled: Dispatch<SetStateAction<boolean>>;
+  volume: number;
+  setVolume: Dispatch<SetStateAction<number>>;
 }) {
   return (
-    <button
-      className={soundEnabled ? "icon-toggle active" : "icon-toggle"}
-      onClick={() => setSoundEnabled((value) => !value)}
-      aria-label={soundEnabled ? "Mute SFX" : "Unmute SFX"}
-      title={soundEnabled ? "Mute SFX" : "Unmute SFX"}
-    >
-      <SpeakerIcon muted={!soundEnabled} />
-    </button>
+    <div className="sound-control">
+      <button
+        className={soundEnabled ? "icon-toggle active" : "icon-toggle"}
+        onClick={() => setSoundEnabled((value) => !value)}
+        aria-label={soundEnabled ? "Mute SFX" : "Unmute SFX"}
+        title={soundEnabled ? "Mute SFX" : "Unmute SFX"}
+      >
+        <SpeakerIcon muted={!soundEnabled} />
+      </button>
+      <div className="volume-popover" aria-label="SFX volume">
+        <span>Volume</span>
+        <input
+          type="range"
+          min="0"
+          max="1"
+          step="0.01"
+          value={volume}
+          onChange={(event) => {
+            const nextVolume = Number(event.target.value);
+            setVolume(nextVolume);
+            if (nextVolume > 0) setSoundEnabled(true);
+          }}
+        />
+        <strong>{Math.round(volume * 100)}%</strong>
+      </div>
+    </div>
   );
 }
 
@@ -732,7 +802,7 @@ function playSfx(name: SfxName, volume: number, ref: React.MutableRefObject<Audi
   ref.current ??= new AudioContextClass();
   const ctx = ref.current;
   if (name === "card") {
-    playNoiseHit(ctx, volume, 0.07, 900, 0.12);
+    playNoiseHit(ctx, volume, 0.09, 950, 0.28);
     return;
   }
   if (name === "chips-fly") {
@@ -789,21 +859,22 @@ function playNoiseHit(ctx: AudioContext, volume: number, duration: number, filte
 }
 
 function playChipFly(ctx: AudioContext, volume: number) {
-  [520, 690, 820].forEach((frequency, index) => {
+  [360, 470, 590, 720, 880].forEach((frequency, index) => {
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
-    const start = ctx.currentTime + index * 0.045;
-    osc.type = "triangle";
+    const start = ctx.currentTime + index * 0.032;
+    osc.type = index % 2 ? "square" : "triangle";
     osc.frequency.setValueAtTime(frequency, start);
-    osc.frequency.exponentialRampToValueAtTime(frequency * 1.55, start + 0.16);
-    gain.gain.setValueAtTime(volume * 0.045, start);
-    gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.18);
+    osc.frequency.exponentialRampToValueAtTime(frequency * 0.62, start + 0.11);
+    gain.gain.setValueAtTime(volume * 0.075, start);
+    gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.16);
     osc.connect(gain);
     gain.connect(ctx.destination);
     osc.start(start);
-    osc.stop(start + 0.2);
+    osc.stop(start + 0.18);
   });
-  playNoiseHit(ctx, volume, 0.18, 2800, 0.08);
+  playNoiseHit(ctx, volume, 0.28, 2200, 0.24);
+  window.setTimeout(() => playNoiseHit(ctx, volume, 0.18, 3200, 0.16), 70);
 }
 
 declare global {

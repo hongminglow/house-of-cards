@@ -1329,8 +1329,57 @@ label {
   stroke-width: 1.85;
 }
 
-.history-modal {
-  width: min(760px, 100%);
+.history-control,
+.sound-control {
+  position: relative;
+  display: inline-flex;
+}
+
+.history-popover,
+.volume-popover {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  border: 1px solid rgba(232, 202, 128, 0.24);
+  border-radius: 10px;
+  background: rgba(8, 19, 16, 0.95);
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.44);
+  backdrop-filter: blur(16px);
+}
+
+.history-popover {
+  z-index: 18;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  width: min(420px, calc(100vw - 44px));
+  max-height: min(560px, calc(100dvh - 92px));
+  padding: 14px;
+}
+
+.history-popover::before,
+.volume-popover::before {
+  position: absolute;
+  top: -7px;
+  right: 16px;
+  width: 12px;
+  height: 12px;
+  border-top: 1px solid rgba(232, 202, 128, 0.24);
+  border-left: 1px solid rgba(232, 202, 128, 0.24);
+  background: rgba(8, 19, 16, 0.95);
+  content: "";
+  transform: rotate(45deg);
+}
+
+.history-popover-heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+
+.history-popover-heading h2 {
+  margin: 0;
+  font-size: 20px;
 }
 
 .history-content {
@@ -1339,6 +1388,10 @@ label {
   min-height: 0;
   overflow-y: auto;
   padding-right: 6px;
+}
+
+.history-popover .history-content {
+  max-height: 448px;
 }
 
 .empty-history {
@@ -1431,6 +1484,45 @@ label {
   height: 59px;
   border-radius: 6px;
   box-shadow: 0 8px 14px rgba(0, 0, 0, 0.26);
+}
+
+.volume-popover {
+  z-index: 19;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px 10px;
+  width: 210px;
+  padding: 12px;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-4px);
+  transition:
+    opacity 140ms ease,
+    transform 140ms ease;
+}
+
+.sound-control:hover .volume-popover,
+.sound-control:focus-within .volume-popover {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
+}
+
+.volume-popover span {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.volume-popover strong {
+  color: #f8edd5;
+  font-size: 12px;
+  text-align: right;
+}
+
+.volume-popover input {
+  grid-column: 1 / -1;
+  min-height: 22px;
+  padding: 0;
 }
 
 .notice {
