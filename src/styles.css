@@ -486,18 +486,27 @@ input {
 }
 
 .rule-card-samples .card-view {
-  width: 42px;
-  height: 58px;
+  width: 50px;
+  height: 70px;
   border-radius: 7px;
   box-shadow: 0 10px 18px rgba(0, 0, 0, 0.24);
 }
 
-.rule-card-samples .card-view strong {
-  font-size: 17px;
+.rule-card-samples .card-corner {
+  top: 4px;
+  left: 4px;
 }
 
-.rule-card-samples .card-view span {
-  font-size: 10px;
+.rule-card-samples .card-corner.bottom {
+  inset: auto 4px 4px auto;
+}
+
+.rule-card-samples .card-corner strong {
+  font-size: 11px;
+}
+
+.rule-card-samples .card-center {
+  inset: 15px 9px;
 }
 
 .game-shell {
@@ -864,28 +873,158 @@ label {
 }
 
 .card-view {
+  position: relative;
   display: grid;
   place-items: center;
   width: 58px;
   height: 80px;
   border-radius: 8px;
-  background: #f8f0df;
+  overflow: hidden;
+  border: 1px solid rgba(28, 23, 18, 0.16);
+  background:
+    radial-gradient(circle at 50% 42%, rgba(255, 255, 255, 0.72), transparent 44%),
+    linear-gradient(145deg, #fffaf0, #eee2cd);
   color: #111816;
-  box-shadow: 0 12px 20px rgba(0, 0, 0, 0.28);
+  box-shadow: 0 12px 20px rgba(0, 0, 0, 0.28), inset 0 0 0 2px rgba(255, 255, 255, 0.44);
 }
 
 .card-view.red {
   color: #ba2732;
 }
 
-.card-view strong {
-  font-size: 24px;
-  line-height: 1;
+.card-corner {
+  position: absolute;
+  top: 5px;
+  left: 5px;
+  display: grid;
+  justify-items: center;
+  gap: 1px;
+  z-index: 2;
 }
 
-.card-view span {
+.card-corner.bottom {
+  inset: auto 5px 5px auto;
+  transform: rotate(180deg);
+}
+
+.card-corner strong {
   font-size: 13px;
-  font-weight: 800;
+  line-height: 1;
+  font-weight: 900;
+  letter-spacing: 0;
+}
+
+.suit-mark {
+  width: 10px;
+  height: 10px;
+  fill: currentColor;
+  flex: 0 0 auto;
+}
+
+.card-center {
+  position: absolute;
+  inset: 17px 11px;
+  display: grid;
+  place-items: center;
+}
+
+.pip-layout {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: center;
+  justify-items: center;
+  gap: 1px;
+}
+
+.pip-layout .suit-mark {
+  width: 12px;
+  height: 12px;
+}
+
+.pips-1 {
+  grid-template-columns: 1fr;
+}
+
+.pips-1 .suit-mark {
+  width: 24px;
+  height: 24px;
+}
+
+.pips-3,
+.pips-5,
+.pips-7,
+.pips-9 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.pips-10 .suit-mark,
+.pips-9 .suit-mark,
+.pips-8 .suit-mark,
+.pips-7 .suit-mark {
+  width: 9px;
+  height: 9px;
+}
+
+.face-card {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 76%;
+  height: 84%;
+  border: 1px solid currentColor;
+  border-radius: 5px;
+  background:
+    linear-gradient(135deg, rgba(232, 202, 128, 0.3), transparent 42%),
+    rgba(255, 255, 255, 0.38);
+}
+
+.royal-crown {
+  position: absolute;
+  top: 6px;
+  display: flex;
+  gap: 2px;
+}
+
+.royal-crown span {
+  width: 5px;
+  height: 8px;
+  clip-path: polygon(50% 0, 100% 100%, 0 100%);
+  background: #d8aa49;
+}
+
+.royal-head {
+  width: 15px;
+  height: 15px;
+  margin-top: 8px;
+  border-radius: 50%;
+  background: #d8a377;
+  box-shadow: inset 0 -3px 0 rgba(92, 47, 26, 0.22);
+}
+
+.royal-body {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 20px;
+  margin-top: -2px;
+  border-radius: 9px 9px 4px 4px;
+  background: currentColor;
+  color: #fffaf0;
+}
+
+.royal-body .suit-mark {
+  width: 10px;
+  height: 10px;
+}
+
+.face-card > strong {
+  position: absolute;
+  bottom: 4px;
+  font-size: 11px;
+  line-height: 1;
+  font-weight: 900;
 }
 
 .action-bar {

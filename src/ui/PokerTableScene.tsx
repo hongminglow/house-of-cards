@@ -1,4 +1,4 @@
-import { Canvas, useFrame, useThree } from "@react-three/fiber";
+import { Canvas, useFrame, useLoader, useThree } from "@react-three/fiber";
 import { Environment, Float, OrbitControls, Text } from "@react-three/drei";
 import { useMemo, useRef } from "react";
 import * as THREE from "three";
@@ -11,20 +11,22 @@ type Props = {
 
 export function PokerTableScene({ room, playerSeat }: Props) {
   return (
-    <Canvas camera={{ position: [0, 6.2, 8.8], fov: 42 }} shadows>
+    <Canvas camera={{ position: [0, 5.45, 7.7], fov: 42 }} shadows dpr={[1, 2]}>
       <color attach="background" args={["#07110f"]} />
-      <fog attach="fog" args={["#07110f", 10, 26]} />
-      <ambientLight intensity={0.55} />
-      <directionalLight castShadow position={[3, 6, 4]} intensity={2.2} />
-      <pointLight position={[0, 2.4, 0]} intensity={1.4} color="#f7d08a" />
+      <fog attach="fog" args={["#07110f", 11, 27]} />
+      <ambientLight intensity={0.5} />
+      <directionalLight castShadow position={[3.8, 7.2, 4.4]} intensity={2.35} />
+      <spotLight castShadow position={[0, 5.6, 3.4]} angle={0.42} penumbra={0.72} intensity={2.8} color="#ffe1a3" />
+      <pointLight position={[0, 2.7, -1.8]} intensity={2.2} color="#f7d08a" />
+      <pointLight position={[-2.4, 2.4, -2.4]} intensity={0.8} color="#75d8b5" />
       <CameraTarget />
       <TableSurface />
       <CommunityCards room={room} />
-      <Dealer room={room} />
+      <DealerPortrait room={room} />
       <ChipStacks room={room} />
       <SeatMarkers room={room} playerSeat={playerSeat} />
       <Environment preset="night" />
-      <OrbitControls enableZoom={false} enablePan={false} maxPolarAngle={1.25} minPolarAngle={0.75} />
+      <OrbitControls enableZoom={false} enablePan={false} maxPolarAngle={1.18} minPolarAngle={0.72} />
     </Canvas>
   );
 }
@@ -40,9 +42,9 @@ function CameraTarget() {
         camera.updateProjectionMatrix();
       }
     }
-    const targetPosition = narrow ? new THREE.Vector3(0, 9.6, 15.2) : new THREE.Vector3(0, 6.2, 8.8);
+    const targetPosition = narrow ? new THREE.Vector3(0, 9.2, 14.4) : new THREE.Vector3(0, 5.45, 7.7);
     camera.position.lerp(targetPosition, 0.08);
-    camera.lookAt(0, narrow ? 0 : 0.35, 0);
+    camera.lookAt(0, narrow ? 0.35 : 0.78, narrow ? 0.1 : -0.25);
   });
   return null;
 }
@@ -58,215 +60,102 @@ function TableSurface() {
         <ringGeometry args={[4.55, 4.75, 96]} />
         <meshStandardMaterial color="#c7974d" roughness={0.45} metalness={0.35} />
       </mesh>
-      <mesh rotation-x={-Math.PI / 2} position={[0, 0.04, 0]}>
+      <mesh rotation-x={-Math.PI / 2} position={[0, 0.045, 0]}>
         <ringGeometry args={[1.5, 1.55, 96]} />
         <meshStandardMaterial color="#2b7d69" roughness={0.8} />
+      </mesh>
+      <mesh rotation-x={-Math.PI / 2} position={[0, 0.055, -2.05]}>
+        <ringGeometry args={[0.52, 0.62, 40]} />
+        <meshStandardMaterial color="#d6aa54" roughness={0.5} metalness={0.3} />
       </mesh>
     </group>
   );
 }
 
-function Dealer({ room }: { room: RoomPublicState | null }) {
-  const head = useRef<THREE.Group>(null);
-  const eyeLeft = useRef<THREE.Mesh>(null);
-  const eyeRight = useRef<THREE.Mesh>(null);
-  const torso = useRef<THREE.Group>(null);
-  const leftForearm = useRef<THREE.Group>(null);
-  const rightForearm = useRef<THREE.Group>(null);
-  const cardFan = useRef<THREE.Group>(null);
-  const dealCard = useRef<THREE.Group>(null);
+function DealerPortrait({ room }: { room: RoomPublicState | null }) {
+  const dealing = room?.street !== "waiting" && room?.street !== "settled";
+  return (
+    <Float speed={1.05} rotationIntensity={0.025} floatIntensity={0.05}>
+      <group position={[0, 0.22, -2.55]} scale={1.65}>
+        <CroupierBackdrop />
+        <CroupierHeroPortrait dealing={dealing} />
+      </group>
+    </Float>
+  );
+}
+
+function CroupierBackdrop() {
+  return (
+    <group position={[0, 1.25, -0.52]}>
+      <mesh position={[0, 0.12, 0]} rotation-x={Math.PI / 2}>
+        <torusGeometry args={[0.62, 0.035, 32, 72]} />
+        <meshStandardMaterial color="#c7974d" emissive="#3d2708" emissiveIntensity={0.24} roughness={0.34} metalness={0.6} />
+      </mesh>
+      <mesh position={[0, 0.18, 0.06]} scale={[0.7, 0.9, 0.08]}>
+        <sphereGeometry args={[0.24, 28, 16]} />
+        <meshStandardMaterial color="#c7974d" emissive="#3d2708" emissiveIntensity={0.16} roughness={0.4} metalness={0.5} />
+      </mesh>
+      <mesh position={[0, -0.08, 0.06]} rotation-x={Math.PI}>
+        <coneGeometry args={[0.22, 0.42, 3]} />
+        <meshStandardMaterial color="#c7974d" emissive="#3d2708" emissiveIntensity={0.16} roughness={0.4} metalness={0.5} />
+      </mesh>
+    </group>
+  );
+}
+
+function CroupierHeroPortrait({ dealing = false }: { dealing?: boolean }) {
+  const group = useRef<THREE.Group>(null);
+  const sourceTexture = useLoader(THREE.TextureLoader, "/assets/house-of-cards-croupier.png");
+  const texture = useMemo(() => {
+    const cropped = sourceTexture.clone();
+    cropped.colorSpace = THREE.SRGBColorSpace;
+    cropped.wrapS = THREE.ClampToEdgeWrapping;
+    cropped.wrapT = THREE.ClampToEdgeWrapping;
+    cropped.repeat.set(0.43, 0.9);
+    cropped.offset.set(0.43, 0.02);
+    cropped.needsUpdate = true;
+    return cropped;
+  }, [sourceTexture]);
+  const alphaMap = useMemo(() => {
+    const canvas = document.createElement("canvas");
+    canvas.width = 256;
+    canvas.height = 256;
+    const ctx = canvas.getContext("2d");
+    if (ctx) {
+      const gradient = ctx.createRadialGradient(128, 112, 72, 128, 112, 182);
+      gradient.addColorStop(0, "rgb(255,255,255)");
+      gradient.addColorStop(0.58, "rgb(255,255,255)");
+      gradient.addColorStop(1, "rgb(0,0,0)");
+      ctx.fillStyle = "black";
+      ctx.fillRect(0, 0, 256, 256);
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, 256, 256);
+    }
+    const map = new THREE.CanvasTexture(canvas);
+    map.needsUpdate = true;
+    return map;
+  }, []);
 
   useFrame(({ pointer, clock }) => {
-    const frontY = pointer.y > -0.82 ? pointer.y : -0.25;
-    const yaw = THREE.MathUtils.clamp(pointer.x * 0.36, -0.32, 0.32);
-    const pitch = THREE.MathUtils.clamp(frontY * 0.2, -0.1, 0.14);
-    const dealing = room?.street !== "waiting" && room?.street !== "settled";
-    const dealPulse = dealing ? Math.sin(clock.elapsedTime * (room?.street === "preflop" ? 3.4 : 1.8)) * 0.5 + 0.5 : 0;
-
-    if (head.current) {
-      head.current.rotation.y = THREE.MathUtils.lerp(head.current.rotation.y, yaw, 0.08);
-      head.current.rotation.x = THREE.MathUtils.lerp(head.current.rotation.x, -pitch, 0.08);
-    }
-    if (torso.current) {
-      torso.current.rotation.y = THREE.MathUtils.lerp(torso.current.rotation.y, yaw * 0.16, 0.04);
-    }
-    [eyeLeft.current, eyeRight.current].forEach((eye) => {
-      if (eye) {
-        eye.position.x = THREE.MathUtils.lerp(eye.position.x, pointer.x * 0.022, 0.12);
-        eye.position.y = THREE.MathUtils.lerp(eye.position.y, 0.02 + frontY * 0.016, 0.12);
-      }
-    });
-    if (leftForearm.current) {
-      leftForearm.current.rotation.z = THREE.MathUtils.lerp(leftForearm.current.rotation.z, 0.7 + dealPulse * 0.08, 0.06);
-    }
-    if (rightForearm.current) {
-      rightForearm.current.rotation.z = THREE.MathUtils.lerp(rightForearm.current.rotation.z, -0.72 - dealPulse * 0.12, 0.08);
-      rightForearm.current.rotation.x = THREE.MathUtils.lerp(rightForearm.current.rotation.x, 0.08 + dealPulse * 0.12, 0.08);
-    }
-    if (cardFan.current) {
-      cardFan.current.rotation.y = THREE.MathUtils.lerp(cardFan.current.rotation.y, -0.32 + dealPulse * 0.06, 0.05);
-    }
-    if (dealCard.current) {
-      dealCard.current.position.x = THREE.MathUtils.lerp(dealCard.current.position.x, 0.82 + dealPulse * 0.36, 0.08);
-      dealCard.current.position.z = THREE.MathUtils.lerp(dealCard.current.position.z, 0.7 + dealPulse * 0.12, 0.08);
-      dealCard.current.rotation.z = THREE.MathUtils.lerp(dealCard.current.rotation.z, -0.26 - dealPulse * 0.12, 0.08);
-    }
+    if (!group.current) return;
+    const pulse = dealing ? Math.sin(clock.elapsedTime * 2.2) * 0.006 : 0;
+    const yaw = THREE.MathUtils.clamp(pointer.x * 0.075, -0.07, 0.07);
+    const pitch = THREE.MathUtils.clamp(pointer.y * 0.04, -0.025, 0.035);
+    group.current.rotation.y = THREE.MathUtils.lerp(group.current.rotation.y, yaw, 0.06);
+    group.current.rotation.x = THREE.MathUtils.lerp(group.current.rotation.x, -pitch + pulse, 0.06);
   });
 
   return (
-    <Float speed={1.1} rotationIntensity={0.035} floatIntensity={0.07}>
-      <group position={[0, 0.5, -2.95]}>
-        <mesh receiveShadow position={[0, -0.04, 0.18]} rotation-x={-Math.PI / 2}>
-          <circleGeometry args={[1.28, 48]} />
-          <meshStandardMaterial color="#07110f" transparent opacity={0.32} />
-        </mesh>
-
-        <group ref={torso}>
-          <mesh castShadow position={[0, 0.58, 0]} scale={[0.88, 1.08, 0.55]}>
-            <capsuleGeometry args={[0.48, 0.72, 12, 28]} />
-            <meshStandardMaterial color="#11161b" roughness={0.48} metalness={0.08} />
-          </mesh>
-          <mesh castShadow position={[0, 0.66, 0.33]} scale={[0.5, 0.86, 0.08]}>
-            <boxGeometry args={[1, 1, 1]} />
-            <meshStandardMaterial color="#f1e2cc" roughness={0.62} />
-          </mesh>
-          <mesh castShadow position={[-0.2, 0.72, 0.38]} rotation-z={-0.14} scale={[0.14, 0.8, 0.05]}>
-            <boxGeometry args={[1, 1, 1]} />
-            <meshStandardMaterial color="#0b0f12" roughness={0.5} />
-          </mesh>
-          <mesh castShadow position={[0.2, 0.72, 0.38]} rotation-z={0.14} scale={[0.14, 0.8, 0.05]}>
-            <boxGeometry args={[1, 1, 1]} />
-            <meshStandardMaterial color="#0b0f12" roughness={0.5} />
-          </mesh>
-          <group position={[0, 1.06, 0.42]}>
-            <mesh castShadow position={[-0.09, 0, 0]} rotation-z={Math.PI / 2}>
-              <coneGeometry args={[0.1, 0.18, 3]} />
-              <meshStandardMaterial color="#07090a" roughness={0.42} />
-            </mesh>
-            <mesh castShadow position={[0.09, 0, 0]} rotation-z={-Math.PI / 2}>
-              <coneGeometry args={[0.1, 0.18, 3]} />
-              <meshStandardMaterial color="#07090a" roughness={0.42} />
-            </mesh>
-            <mesh castShadow>
-              <sphereGeometry args={[0.055, 16, 16]} />
-              <meshStandardMaterial color="#07090a" roughness={0.42} />
-            </mesh>
-          </group>
-          <mesh position={[-0.24, 0.61, 0.43]} rotation-z={-0.22}>
-            <cylinderGeometry args={[0.035, 0.035, 0.02, 18]} />
-            <meshStandardMaterial color="#d8aa49" emissive="#4a310c" emissiveIntensity={0.18} roughness={0.36} metalness={0.6} />
-          </mesh>
-        </group>
-
-        <mesh castShadow position={[0, 1.22, 0.08]}>
-          <cylinderGeometry args={[0.13, 0.16, 0.24, 18]} />
-          <meshStandardMaterial color="#d6a174" roughness={0.5} />
-        </mesh>
-
-        <group ref={head} position={[0, 1.45, 0.12]}>
-          <mesh castShadow scale={[0.9, 1.05, 0.82]}>
-            <sphereGeometry args={[0.42, 32, 32]} />
-            <meshStandardMaterial color="#d9a579" roughness={0.48} />
-          </mesh>
-          <mesh castShadow position={[0, 0.22, -0.04]} scale={[1.08, 0.72, 0.94]}>
-            <sphereGeometry args={[0.43, 32, 14, 0, Math.PI * 2, 0, Math.PI / 1.45]} />
-            <meshStandardMaterial color="#5c2f1a" roughness={0.72} />
-          </mesh>
-          <mesh castShadow position={[-0.37, -0.02, -0.02]} rotation-z={0.1}>
-            <capsuleGeometry args={[0.13, 0.44, 10, 14]} />
-            <meshStandardMaterial color="#6e391f" roughness={0.76} />
-          </mesh>
-          <mesh castShadow position={[0.37, -0.02, -0.02]} rotation-z={-0.1}>
-            <capsuleGeometry args={[0.13, 0.44, 10, 14]} />
-            <meshStandardMaterial color="#6e391f" roughness={0.76} />
-          </mesh>
-          <mesh position={[-0.15, 0.04, 0.34]}>
-            <sphereGeometry args={[0.055, 16, 16]} />
-            <meshStandardMaterial color="#f7ead9" roughness={0.35} />
-          </mesh>
-          <mesh position={[0.15, 0.04, 0.34]}>
-            <sphereGeometry args={[0.055, 16, 16]} />
-            <meshStandardMaterial color="#f7ead9" roughness={0.35} />
-          </mesh>
-          <mesh ref={eyeLeft} position={[-0.15, 0.03, 0.385]}>
-            <sphereGeometry args={[0.026, 16, 16]} />
-            <meshStandardMaterial color="#101412" />
-          </mesh>
-          <mesh ref={eyeRight} position={[0.15, 0.03, 0.385]}>
-            <sphereGeometry args={[0.026, 16, 16]} />
-            <meshStandardMaterial color="#101412" />
-          </mesh>
-          <mesh position={[-0.15, 0.14, 0.37]} rotation-z={0.14}>
-            <boxGeometry args={[0.16, 0.018, 0.018]} />
-            <meshStandardMaterial color="#3a1b11" roughness={0.6} />
-          </mesh>
-          <mesh position={[0.15, 0.14, 0.37]} rotation-z={-0.14}>
-            <boxGeometry args={[0.16, 0.018, 0.018]} />
-            <meshStandardMaterial color="#3a1b11" roughness={0.6} />
-          </mesh>
-          <mesh position={[0, -0.17, 0.38]} scale={[1, 0.42, 0.32]}>
-            <sphereGeometry args={[0.08, 18, 10]} />
-            <meshStandardMaterial color="#9c332e" roughness={0.5} />
-          </mesh>
-          <mesh position={[-0.44, -0.08, 0.08]} rotation-x={Math.PI / 2}>
-            <torusGeometry args={[0.035, 0.006, 8, 16]} />
-            <meshStandardMaterial color="#d8aa49" roughness={0.3} metalness={0.78} />
-          </mesh>
-          <mesh position={[0.44, -0.08, 0.08]} rotation-x={Math.PI / 2}>
-            <torusGeometry args={[0.035, 0.006, 8, 16]} />
-            <meshStandardMaterial color="#d8aa49" roughness={0.3} metalness={0.78} />
-          </mesh>
-        </group>
-
-        <group ref={leftForearm} position={[-0.54, 0.78, 0.34]} rotation={[0.1, 0.1, 0.7]}>
-          <mesh castShadow position={[0, -0.28, 0]}>
-            <capsuleGeometry args={[0.075, 0.6, 8, 14]} />
-            <meshStandardMaterial color="#d8a377" roughness={0.5} />
-          </mesh>
-          <mesh castShadow position={[0, -0.64, 0.04]} scale={[1.22, 0.66, 0.36]}>
-            <sphereGeometry args={[0.11, 18, 12]} />
-            <meshStandardMaterial color="#d8a377" roughness={0.5} />
-          </mesh>
-        </group>
-
-        <group ref={rightForearm} position={[0.56, 0.76, 0.36]} rotation={[0.08, -0.04, -0.72]}>
-          <mesh castShadow position={[0, -0.3, 0]}>
-            <capsuleGeometry args={[0.075, 0.62, 8, 14]} />
-            <meshStandardMaterial color="#d8a377" roughness={0.5} />
-          </mesh>
-          <mesh castShadow position={[0, -0.68, 0.04]} scale={[1.18, 0.6, 0.34]}>
-            <sphereGeometry args={[0.11, 18, 12]} />
-            <meshStandardMaterial color="#d8a377" roughness={0.5} />
-          </mesh>
-        </group>
-
-        <group ref={cardFan} position={[-0.83, 0.73, 0.68]} rotation={[0.16, -0.32, 0.5]}>
-          {[-1, 0, 1].map((offset) => (
-            <group key={offset} position={[offset * 0.075, 0, Math.abs(offset) * 0.018]} rotation-z={offset * -0.22}>
-              <mesh castShadow>
-                <boxGeometry args={[0.28, 0.018, 0.4]} />
-                <meshStandardMaterial color="#f8f0df" roughness={0.45} />
-              </mesh>
-              <mesh position={[-0.07, 0.012, -0.12]}>
-                <boxGeometry args={[0.055, 0.006, 0.055]} />
-                <meshStandardMaterial color={offset === 0 ? "#111816" : "#ba2732"} roughness={0.42} />
-              </mesh>
-            </group>
-          ))}
-        </group>
-
-        <group ref={dealCard} position={[0.82, 0.4, 0.7]} rotation={[0.12, 0.06, -0.26]}>
-          <mesh castShadow>
-            <boxGeometry args={[0.34, 0.016, 0.48]} />
-            <meshStandardMaterial color="#f8f0df" roughness={0.44} />
-          </mesh>
-          <mesh position={[-0.1, 0.011, -0.16]}>
-            <boxGeometry args={[0.06, 0.006, 0.06]} />
-            <meshStandardMaterial color="#ba2732" roughness={0.42} />
-          </mesh>
-        </group>
-      </group>
-    </Float>
+    <group ref={group} position={[0, 1.08, 0.42]} rotation={[0.03, 0, 0]}>
+      <mesh castShadow>
+        <planeGeometry args={[2.5, 2.78]} />
+        <meshBasicMaterial map={texture} alphaMap={alphaMap} transparent opacity={0.98} toneMapped={false} />
+      </mesh>
+      <mesh position={[0, -0.06, -0.012]}>
+        <planeGeometry args={[2.62, 2.9]} />
+        <meshBasicMaterial color="#07110f" transparent opacity={0.18} />
+      </mesh>
+    </group>
   );
 }
 
