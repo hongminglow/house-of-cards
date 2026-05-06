@@ -18,6 +18,19 @@ type CroupierModelConfig = {
   rotationY: number;
   y: number;
   z: number;
+  look?: Partial<LookProfile>;
+};
+
+type LookProfile = {
+  yawPower: number;
+  yawLimit: number;
+  pitchPower: number;
+  pitchDownLimit: number;
+  pitchUpLimit: number;
+  targetLerp: number;
+  rootLerp: number;
+  rootYawWithTargets: number;
+  rootPitchWithTargets: number;
 };
 
 type LookTarget = {
@@ -33,9 +46,45 @@ const CROUPIER_MODELS: CroupierModelConfig[] = [
   { id: "croupier-mika", path: "/assets/croupiers/croupier-mika.glb", height: 2.82, rotationY: 0, y: -1.9, z: -0.2 },
   { id: "croupier-stella", path: "/assets/croupiers/croupier-stella.glb", height: 2.92, rotationY: 0, y: -1.98, z: -0.18 },
   { id: "croupier-yuna", path: "/assets/croupiers/croupier-yuna.glb", height: 2.92, rotationY: 0, y: -1.98, z: -0.18 },
-  { id: "croupier-serena", path: "/assets/croupiers/croupier-serena.glb", height: 2.86, rotationY: 0, y: -1.94, z: -0.18 },
+  {
+    id: "croupier-serena",
+    path: "/assets/croupiers/croupier-serena.glb",
+    height: 2.86,
+    rotationY: 0,
+    y: -1.94,
+    z: -0.18,
+    look: {
+      yawPower: 0.68,
+      yawLimit: 0.48,
+      pitchPower: 0.2,
+      pitchDownLimit: -0.15,
+      pitchUpLimit: 0.18,
+      targetLerp: 0.22,
+      rootLerp: 0.18,
+      rootYawWithTargets: 0.82,
+      rootPitchWithTargets: 0.62
+    }
+  },
   { id: "croupier-celeste", path: "/assets/croupiers/croupier-celeste.glb", height: 2.92, rotationY: 0, y: -1.98, z: -0.18 }
 ];
+
+const DEFAULT_LOOK_PROFILE: LookProfile = {
+  yawPower: 0.18,
+  yawLimit: 0.16,
+  pitchPower: 0.055,
+  pitchDownLimit: -0.035,
+  pitchUpLimit: 0.05,
+  targetLerp: 0.08,
+  rootLerp: 0.08,
+  rootYawWithTargets: 0.22,
+  rootPitchWithTargets: 0.18
+};
+
+const DEALER_CUTOUT_CENTER = 2.28;
+const DEALER_CUTOUT_RADIUS_X = 1.34;
+const DEALER_CUTOUT_RADIUS_Z = 1.02;
+const DEALER_RIM_RADIUS_X = 1.54;
+const DEALER_RIM_RADIUS_Z = 1.18;
 
 export function PokerTableScene({ room, playerSeat, onCroupierReady }: Props) {
   return (
@@ -108,7 +157,7 @@ function createDealerCutoutTableGeometry(radius: number, depth: number) {
   tableShape.absellipse(0, 0, radius, radius, 0, Math.PI * 2, false, 0);
 
   const dealerCutout = new THREE.Path();
-  dealerCutout.absellipse(0, 2.28, 1.22, 0.92, 0, Math.PI * 2, true, 0);
+  dealerCutout.absellipse(0, DEALER_CUTOUT_CENTER, DEALER_CUTOUT_RADIUS_X, DEALER_CUTOUT_RADIUS_Z, 0, Math.PI * 2, true, 0);
   tableShape.holes.push(dealerCutout);
 
   return new THREE.ExtrudeGeometry(tableShape, {
@@ -120,10 +169,10 @@ function createDealerCutoutTableGeometry(radius: number, depth: number) {
 
 function createDealerCutoutRimGeometry() {
   const rimShape = new THREE.Shape();
-  rimShape.absellipse(0, 2.28, 1.38, 1.05, 0, Math.PI * 2, false, 0);
+  rimShape.absellipse(0, DEALER_CUTOUT_CENTER, DEALER_RIM_RADIUS_X, DEALER_RIM_RADIUS_Z, 0, Math.PI * 2, false, 0);
 
   const rimHole = new THREE.Path();
-  rimHole.absellipse(0, 2.28, 1.22, 0.92, 0, Math.PI * 2, true, 0);
+  rimHole.absellipse(0, DEALER_CUTOUT_CENTER, DEALER_CUTOUT_RADIUS_X, DEALER_CUTOUT_RADIUS_Z, 0, Math.PI * 2, true, 0);
   rimShape.holes.push(rimHole);
 
   return new THREE.ShapeGeometry(rimShape, 72);
@@ -149,6 +198,7 @@ function CroupierModel({ model, dealing = false, onReady }: { model: CroupierMod
   const lookRoot = useRef<THREE.Group>(null);
   const lookTargets = useRef<LookTarget[]>([]);
   const { scene } = useGLTF(model.path);
+  const look = useMemo(() => ({ ...DEFAULT_LOOK_PROFILE, ...model.look }), [model.look]);
   const normalizedScene = useMemo(() => {
     const source = cloneSkeleton(scene) as THREE.Group;
     prepareCroupierAsset(source);
@@ -175,8 +225,10 @@ function CroupierModel({ model, dealing = false, onReady }: { model: CroupierMod
 
   useFrame(({ pointer, clock }) => {
     const isCursorInFront = pointer.y > -0.68;
-    const targetYaw = isCursorInFront ? THREE.MathUtils.clamp(pointer.x * 0.18, -0.16, 0.16) : 0;
-    const targetPitch = isCursorInFront ? THREE.MathUtils.clamp(pointer.y * 0.055, -0.035, 0.05) : 0;
+    const targetYaw = isCursorInFront ? THREE.MathUtils.clamp(pointer.x * look.yawPower, -look.yawLimit, look.yawLimit) : 0;
+    const targetPitch = isCursorInFront
+      ? THREE.MathUtils.clamp(pointer.y * look.pitchPower, look.pitchDownLimit, look.pitchUpLimit)
+      : 0;
     const dealPulse = dealing ? Math.sin(clock.elapsedTime * 3.15) * 0.5 + 0.5 : 0;
     const idleFloat = Math.sin(clock.elapsedTime * 1.15) * 0.018 + dealPulse * 0.012;
 
@@ -186,20 +238,24 @@ function CroupierModel({ model, dealing = false, onReady }: { model: CroupierMod
 
     if (lookTargets.current.length > 0) {
       for (const target of lookTargets.current) {
-        target.node.rotation.y = THREE.MathUtils.lerp(target.node.rotation.y, target.baseY + targetYaw * target.yawScale, 0.08);
-        target.node.rotation.x = THREE.MathUtils.lerp(target.node.rotation.x, target.baseX - targetPitch * target.pitchScale, 0.08);
+        target.node.rotation.y = THREE.MathUtils.lerp(target.node.rotation.y, target.baseY + targetYaw * target.yawScale, look.targetLerp);
+        target.node.rotation.x = THREE.MathUtils.lerp(target.node.rotation.x, target.baseX - targetPitch * target.pitchScale, look.targetLerp);
       }
 
       if (lookRoot.current) {
-        lookRoot.current.rotation.y = THREE.MathUtils.lerp(lookRoot.current.rotation.y, model.rotationY + targetYaw * 0.22, 0.05);
-        lookRoot.current.rotation.x = THREE.MathUtils.lerp(lookRoot.current.rotation.x, -targetPitch * 0.18, 0.05);
+        lookRoot.current.rotation.y = THREE.MathUtils.lerp(
+          lookRoot.current.rotation.y,
+          model.rotationY + targetYaw * look.rootYawWithTargets,
+          look.rootLerp
+        );
+        lookRoot.current.rotation.x = THREE.MathUtils.lerp(lookRoot.current.rotation.x, -targetPitch * look.rootPitchWithTargets, look.rootLerp);
       }
       return;
     }
 
     if (lookRoot.current) {
-      lookRoot.current.rotation.y = THREE.MathUtils.lerp(lookRoot.current.rotation.y, model.rotationY + targetYaw, 0.08);
-      lookRoot.current.rotation.x = THREE.MathUtils.lerp(lookRoot.current.rotation.x, -targetPitch, 0.08);
+      lookRoot.current.rotation.y = THREE.MathUtils.lerp(lookRoot.current.rotation.y, model.rotationY + targetYaw, look.rootLerp);
+      lookRoot.current.rotation.x = THREE.MathUtils.lerp(lookRoot.current.rotation.x, -targetPitch, look.rootLerp);
     }
   });
 
