@@ -4,6 +4,14 @@ House of Cards is a play-money online Texas Hold'em game for private rooms of up
 
 The product goal is a casino-style poker room with a polished game HUD, readable poker controls, sound feedback, classic card visuals, and a React Three Fiber table scene centered around randomized GLB croupier models.
 
+## Testing Phase Notice
+
+This project is currently in a testing/prototype phase and is intended for local development only. It is not configured or supported for real production usage yet.
+
+The local setup starts a Vite web app and a separate Socket.IO backend server, with Vite proxying `/api` and `/socket.io` requests to the backend. That local proxy setup is convenient for development, but it does not mean the backend is bundled into the Vercel/static web deployment.
+
+Do not use the current build for public production poker rooms without first adding a production-ready backend deployment, durable room state strategy, production database migrations, environment-based CORS, monitoring, rate limiting, and a deployment-specific security review.
+
 ## Product Highlights
 
 - Email-based dev sign-in with a one-time 1,000,000 chip account grant.
@@ -49,12 +57,21 @@ The poker engine owns game state. The client renders snapshots and submits reque
 
 ## Local Development
 
+The supported way to run the project today is local development:
+
 ```bash
 npm install
 npm run dev
 ```
 
 Open `http://127.0.0.1:5173`.
+
+`npm run dev` starts two local processes:
+
+- Vite frontend: `http://127.0.0.1:5173`
+- Express/Socket.IO backend: `http://127.0.0.1:8787`
+
+Vite proxies `/api` and `/socket.io` to the backend during development.
 
 Without `DATABASE_URL` and `REDIS_URL`, the app runs with in-memory users and presence. For durable balances and hand history, copy `.env.example` to `.env`, configure Postgres and Redis, then run:
 
@@ -74,3 +91,5 @@ npm run dev
 ## Current Scope
 
 House of Cards is play-money only. There are no purchases, withdrawals, real-money wagering, or gambling compliance flows in this version.
+
+Production deployment is intentionally out of scope for the current testing build. A normal Vercel static frontend deployment alone will not run the realtime Socket.IO poker server.
