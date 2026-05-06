@@ -1118,8 +1118,79 @@ label {
 
 .action-bar {
   display: grid;
-  gap: 12px;
+  gap: 10px;
   margin-top: 16px;
+}
+
+.turn-timer {
+  display: grid;
+  gap: 8px;
+  border: 1px solid rgba(232, 202, 128, 0.18);
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.2);
+  padding: 10px;
+}
+
+.turn-timer.active {
+  border-color: rgba(117, 216, 181, 0.42);
+  background: rgba(117, 216, 181, 0.1);
+}
+
+.turn-timer.urgent {
+  border-color: rgba(217, 109, 114, 0.48);
+  background: rgba(217, 109, 114, 0.12);
+}
+
+.turn-timer.idle {
+  opacity: 0.72;
+}
+
+.turn-timer-copy {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.1;
+}
+
+.turn-timer-copy strong {
+  color: #f8edd5;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+.turn-timer.active .turn-timer-copy span,
+.turn-timer.active .turn-timer-copy strong {
+  color: #c9ffec;
+}
+
+.turn-timer.urgent .turn-timer-copy span,
+.turn-timer.urgent .turn-timer-copy strong {
+  color: #ffd5d7;
+}
+
+.turn-timer-track {
+  height: 7px;
+  overflow: hidden;
+  border: 1px solid rgba(232, 202, 128, 0.16);
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.34);
+}
+
+.turn-timer-track span {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  transform-origin: left center;
+  background: linear-gradient(90deg, #75d8b5, #e8ca80);
+  transition: transform 240ms linear, background 160ms ease;
+}
+
+.turn-timer.urgent .turn-timer-track span {
+  background: linear-gradient(90deg, #d96d72, #e8ca80);
 }
 
 .wager-row {

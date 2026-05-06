@@ -117,6 +117,8 @@ export function App() {
     socket.emit("action", payload);
   }
 
+  const currentTurnSeat = room?.seats.find((seat) => seat.seatIndex === room.currentTurnSeat);
+
   if (!player) {
     return (
       <main className="login-full-shell" aria-label="House of Cards login">
@@ -313,7 +315,13 @@ export function App() {
         </div>
 
         <div className="game-action-panel edge-panel">
-          <ActionBar legalActions={player.legalActions} onAction={act} />
+          <ActionBar
+            actionDeadlineAt={room.actionDeadlineAt}
+            currentTurnName={currentTurnSeat?.displayName}
+            isLocalTurn={room.currentTurnSeat === player.seatIndex}
+            legalActions={player.legalActions}
+            onAction={act}
+          />
           <div className="game-button-row">
             <button className="ghost-button compact" onClick={() => socket.emit("ready")} disabled={player.isReady}>
               {player.isReady ? "In game" : "Ready"}

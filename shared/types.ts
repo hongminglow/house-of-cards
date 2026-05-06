@@ -107,4 +107,6 @@ export type SfxName =
   | "leave"
   | "warning";
 
+export const TURN_ACTION_MS = 25_000;
+
 export const formatCard = (card: Card): string => `${card.rank}${card.suit[0].toUpperCase()}`;

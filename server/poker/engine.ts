@@ -1,13 +1,13 @@
-import type {
-  Card,
-  GameSnapshot,
-  LegalAction,
-  PlayerAction,
-  PlayerPrivateState,
-  PokerActionPayload,
-  RoomPublicState,
-  SeatPublic,
-  Street
+import {
+  TURN_ACTION_MS,
+  type Card,
+  type GameSnapshot,
+  type LegalAction,
+  type PlayerPrivateState,
+  type PokerActionPayload,
+  type RoomPublicState,
+  type SeatPublic,
+  type Street
 } from "../../shared/types";
 import { shuffleDeck } from "./cards";
 import { evaluateSeven } from "./evaluator";
@@ -16,7 +16,7 @@ export const MAX_PLAYERS = 6;
 export const DEFAULT_BUY_IN = 100_000;
 export const DEFAULT_SMALL_BLIND = 500;
 export const DEFAULT_BIG_BLIND = 1_000;
-export const ACTION_MS = 25_000;
+export const ACTION_MS = TURN_ACTION_MS;
 
 export type EngineUser = {
   id: string;

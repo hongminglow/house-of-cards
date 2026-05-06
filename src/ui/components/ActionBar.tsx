@@ -1,20 +1,53 @@
-import { useMemo, useState } from "react";
-import type { LegalAction, PokerActionPayload } from "../../../shared/types";
+import { useEffect, useMemo, useState } from "react";
+import { TURN_ACTION_MS, type LegalAction, type PokerActionPayload } from "../../../shared/types";
 
 type Props = {
   legalActions: LegalAction[];
+  actionDeadlineAt?: number | null;
+  currentTurnName?: string;
+  isLocalTurn?: boolean;
   onAction: (action: PokerActionPayload) => void;
 };
 
-export function ActionBar({ legalActions, onAction }: Props) {
+export function ActionBar({ legalActions, actionDeadlineAt, currentTurnName, isLocalTurn = false, onAction }: Props) {
   const [amount, setAmount] = useState(1000);
+  const [now, setNow] = useState(Date.now());
   const byType = useMemo(() => new Map(legalActions.map((action) => [action.type, action])), [legalActions]);
   const wager = byType.get("bet") ?? byType.get("raise") ?? byType.get("all-in");
   const min = wager?.minAmount ?? 0;
   const max = wager?.maxAmount ?? 0;
+  const remainingMs = actionDeadlineAt ? Math.max(0, actionDeadlineAt - now) : 0;
+  const remainingSeconds = Math.ceil(remainingMs / 1000);
+  const timerProgress = actionDeadlineAt ? Math.max(0, Math.min(1, remainingMs / TURN_ACTION_MS)) : 0;
+  const timerLabel = isLocalTurn ? "Your turn" : currentTurnName ? `${currentTurnName}'s turn` : "Waiting for action";
+  const timerClassName = [
+    "turn-timer",
+    isLocalTurn ? "active" : "",
+    remainingMs > 0 && remainingMs <= 5_000 ? "urgent" : "",
+    !actionDeadlineAt ? "idle" : ""
+  ]
+    .filter(Boolean)
+    .join(" ");
+
+  useEffect(() => {
+    if (!actionDeadlineAt) return undefined;
+
+    setNow(Date.now());
+    const interval = window.setInterval(() => setNow(Date.now()), 250);
+    return () => window.clearInterval(interval);
+  }, [actionDeadlineAt]);
 
   return (
     <div className="action-bar">
+      <div className={timerClassName} role="timer" aria-live={isLocalTurn ? "polite" : "off"}>
+        <div className="turn-timer-copy">
+          <span>{actionDeadlineAt ? timerLabel : "Waiting for next turn"}</span>
+          <strong>{actionDeadlineAt ? `${remainingSeconds}s` : "--"}</strong>
+        </div>
+        <div className="turn-timer-track" aria-hidden="true">
+          <span style={{ transform: `scaleX(${timerProgress})` }} />
+        </div>
+      </div>
       <div className="wager-row">
         <span>Wager</span>
         <input
