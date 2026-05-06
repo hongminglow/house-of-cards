@@ -138,7 +138,7 @@ export function App() {
           <BrandLockup title="Lobby" />
           <div className="home-header-actions">
             <BalanceAmount amount={player.accountBalance} />
-            <button className="icon-toggle" onClick={() => setRulesOpen(true)} aria-label="Open poker rules" title="Poker rules">
+            <button className="icon-toggle rules-button" onClick={() => setRulesOpen(true)} aria-label="Open poker rules" title="Poker rules">
               <RulesIcon />
             </button>
             <IconSoundButton soundEnabled={soundEnabled} setSoundEnabled={setSoundEnabled} />
@@ -425,9 +425,11 @@ function SpeakerIcon({ muted }: { muted: boolean }) {
 
 function RulesIcon() {
   return (
-    <svg className="speaker-icon" viewBox="0 0 24 24" aria-hidden="true">
-      <path d="M7 5.5h10a2 2 0 0 1 2 2v11H7a2 2 0 0 1-2-2v-9a2 2 0 0 1 2-2Z" />
-      <path d="M8.5 9h7M8.5 12h7M8.5 15h4" />
+    <svg className="rules-icon" viewBox="0 0 24 24" aria-hidden="true">
+      <rect x="6.3" y="3.4" width="11.4" height="17.2" rx="2.2" />
+      <path className="rules-suit" d="M12 8.2c-1.35-1.82-4.1.2-2.17 2.24L12 12.8l2.17-2.36C16.1 8.4 13.35 6.38 12 8.2Z" />
+      <path d="M10.1 15.9h3.8" />
+      <path d="M12 12.8v3.1" />
     </svg>
   );
 }
