@@ -43,6 +43,7 @@ export function App() {
   const [gameSceneReady, setGameSceneReady] = useState(false);
   const audio = useRef<AudioContext | null>(null);
   const soundSettings = useRef({ enabled: soundEnabled, volume });
+  const lastAudibleVolume = useRef(volume);
   const previousBoardReveal = useRef<{ roomCode?: string; count: number }>({ count: 0 });
 
   const room = snapshot?.room ?? null;
@@ -51,6 +52,12 @@ export function App() {
   useEffect(() => {
     soundSettings.current = { enabled: soundEnabled, volume };
   }, [soundEnabled, volume]);
+
+  useEffect(() => {
+    if (volume > 0) {
+      lastAudibleVolume.current = volume;
+    }
+  }, [volume]);
 
   useEffect(() => {
     if (!socket.connected) {
@@ -98,6 +105,7 @@ export function App() {
 
   useEffect(() => {
     setGameSceneReady(false);
+    setHistoryOpen(false);
   }, [room?.roomCode]);
 
   useEffect(() => {
@@ -142,6 +150,19 @@ export function App() {
   function act(payload: PokerActionPayload) {
     socket.emit("action", payload);
   }
+
+  const toggleSound = useCallback(() => {
+    const active = soundEnabled && volume > 0;
+    if (active) {
+      lastAudibleVolume.current = volume;
+      setVolume(0);
+      setSoundEnabled(false);
+      return;
+    }
+
+    setVolume(lastAudibleVolume.current || 0.35);
+    setSoundEnabled(true);
+  }, [soundEnabled, volume]);
 
   const currentTurnSeat = room?.seats.find((seat) => seat.seatIndex === room.currentTurnSeat);
 
@@ -189,14 +210,7 @@ export function App() {
             <button className="icon-toggle rules-button" onClick={() => setRulesOpen(true)} aria-label="Open poker rules" title="Poker rules">
               <RulesIcon />
             </button>
-            <HistoryControl
-              emptyDescription="Join a room to see completed hands, revealed cards, and your table result."
-              entries={[]}
-              open={historyOpen}
-              playerUserId={player.userId}
-              setOpen={setHistoryOpen}
-            />
-            <IconSoundButton setSoundEnabled={setSoundEnabled} setVolume={setVolume} soundEnabled={soundEnabled} volume={volume} />
+            <IconSoundButton onToggleSound={toggleSound} setSoundEnabled={setSoundEnabled} setVolume={setVolume} soundEnabled={soundEnabled} volume={volume} />
           </div>
         </header>
 
@@ -336,7 +350,7 @@ export function App() {
               playerUserId={player.userId}
               setOpen={setHistoryOpen}
             />
-            <IconSoundButton setSoundEnabled={setSoundEnabled} setVolume={setVolume} soundEnabled={soundEnabled} volume={volume} />
+            <IconSoundButton onToggleSound={toggleSound} setSoundEnabled={setSoundEnabled} setVolume={setVolume} soundEnabled={soundEnabled} volume={volume} />
           </div>
         </div>
 
@@ -585,21 +599,31 @@ function RulesModal({ onClose }: { onClose: () => void }) {
   );
 }
 
-function HistoryControl({
-  emptyDescription = "Finished rounds will appear here with winners, revealed cards, and your result.",
-  entries,
-  open,
-  playerUserId,
-  setOpen
-}: {
-  emptyDescription?: string;
-  entries: HandHistoryEntry[];
-  open: boolean;
-  playerUserId: string;
-  setOpen: Dispatch<SetStateAction<boolean>>;
-}) {
+function HistoryControl({ entries, open, playerUserId, setOpen }: { entries: HandHistoryEntry[]; open: boolean; playerUserId: string; setOpen: Dispatch<SetStateAction<boolean>> }) {
+  const controlRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!open) return undefined;
+
+    function handlePointerDown(event: PointerEvent) {
+      if (controlRef.current?.contains(event.target as Node)) return;
+      setOpen(false);
+    }
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") setOpen(false);
+    }
+
+    document.addEventListener("pointerdown", handlePointerDown);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDown);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [open, setOpen]);
+
   return (
-    <div className="history-control">
+    <div className="history-control" ref={controlRef}>
       <button
         className={open ? "icon-toggle history-button active" : "icon-toggle history-button"}
         onClick={() => setOpen((value) => !value)}
@@ -612,11 +636,8 @@ function HistoryControl({
       {open ? (
         <div className="history-popover" role="dialog" aria-label="Game history">
           <div className="history-popover-heading">
-            <div>
-              <p className="micro-label">Table log</p>
-              <h2>Game history</h2>
-            </div>
-            <button className="icon-toggle" onClick={() => setOpen(false)} aria-label="Close history" title="Close history">
+            <h2>Game history</h2>
+            <button className="icon-toggle history-close" onClick={() => setOpen(false)} aria-label="Close history" title="Close history">
               <CloseIcon />
             </button>
           </div>
@@ -626,7 +647,7 @@ function HistoryControl({
             ) : (
               <div className="empty-history">
                 <strong>No completed hands yet</strong>
-                <span>{emptyDescription}</span>
+                <span>Completed hands in this room will appear here.</span>
               </div>
             )}
           </div>
@@ -639,71 +660,57 @@ function HistoryControl({
 function HistoryEntryRow({ entry, playerUserId }: { entry: HandHistoryEntry; playerUserId: string }) {
   const playerResult = entry.participants.find((participant) => participant.userId === playerUserId);
   const resultClassName = playerResult ? (playerResult.delta >= 0 ? "history-result positive" : "history-result negative") : "history-result";
+  const winnerSummary = entry.winners
+    .map((winner) => `${winner.displayName}${winner.handName ? ` · ${winner.handName}` : ""}`)
+    .join(", ");
+  const shownCards = entry.winners.flatMap((winner) => winner.holeCards ?? []);
 
   return (
     <article className="history-row">
-      <div className="history-row-heading">
-        <div>
-          <strong>Hand {entry.handNumber}</strong>
-          <small>{entry.showdown ? "Showdown" : "Won without card reveal"}</small>
-        </div>
-        <span className={resultClassName}>{playerResult ? formatSignedCurrency(playerResult.delta) : "Sat out"}</span>
-      </div>
-
-      <div className="history-winners">
-        {entry.winners.map((winner) => (
-          <div className="history-winner" key={`${entry.handNumber}-${winner.userId}`}>
-            <div>
-              <strong>{winner.displayName}</strong>
-              <span>
-                ${winner.amount.toLocaleString()}
-                {winner.handName ? ` · ${winner.handName}` : ""}
-              </span>
+      <div className="history-row-main">
+        <div className="history-combo">
+          <small>#{entry.handNumber}</small>
+          <strong>{winnerSummary || "Won without reveal"}</strong>
+          {shownCards.length ? (
+            <div className="history-card-pair" aria-label="Shown winner cards">
+              {shownCards.map((card, index) => (
+                <CardView card={card} key={`${entry.handNumber}-winner-${index}-${card.rank}-${card.suit}`} />
+              ))}
             </div>
-            {winner.holeCards?.length ? (
-              <div className="history-card-pair" aria-label={`${winner.displayName} winning cards`}>
-                {winner.holeCards.map((card) => (
-                  <CardView card={card} key={`${winner.userId}-${card.rank}-${card.suit}`} />
-                ))}
-              </div>
-            ) : (
-              <small>No cards shown</small>
-            )}
-          </div>
-        ))}
-      </div>
-
-      {entry.communityCards.length ? (
-        <div className="history-board" aria-label="Community cards">
-          {entry.communityCards.map((card, index) => (
-            <CardView card={card} key={`${entry.handNumber}-board-${index}-${card.rank}-${card.suit}`} />
-          ))}
+          ) : (
+            <span>No cards shown</span>
+          )}
         </div>
-      ) : null}
+        {playerResult ? <span className={resultClassName}>{formatSignedCurrency(playerResult.delta)}</span> : <span className="history-result empty" aria-hidden="true" />}
+      </div>
     </article>
   );
 }
 
 function IconSoundButton({
+  onToggleSound,
   soundEnabled,
   setSoundEnabled,
   volume,
   setVolume
 }: {
+  onToggleSound: () => void;
   soundEnabled: boolean;
   setSoundEnabled: Dispatch<SetStateAction<boolean>>;
   volume: number;
   setVolume: Dispatch<SetStateAction<number>>;
 }) {
+  const active = soundEnabled && volume > 0;
+
   return (
     <div className="sound-control">
       <button
-        className={soundEnabled ? "icon-toggle active" : "icon-toggle"}
-        onClick={() => setSoundEnabled((value) => !value)}
-        aria-label={soundEnabled ? "Mute SFX" : "Unmute SFX"}
-        title={soundEnabled ? "Mute SFX" : "Unmute SFX"}
+        className={active ? "icon-toggle active" : "icon-toggle"}
+        onClick={onToggleSound}
+        aria-label={active ? "Mute SFX" : "Unmute SFX"}
+        title={active ? "Mute SFX" : "Unmute SFX"}
       >
-        <SpeakerIcon muted={!soundEnabled} />
+        <SpeakerIcon muted={!active} />
       </button>
       <div className="volume-popover" aria-label="SFX volume">
         <span>Volume</span>
@@ -716,7 +723,7 @@ function IconSoundButton({
           onChange={(event) => {
             const nextVolume = Number(event.target.value);
             setVolume(nextVolume);
-            if (nextVolume > 0) setSoundEnabled(true);
+            setSoundEnabled(nextVolume > 0);
           }}
         />
         <strong>{Math.round(volume * 100)}%</strong>
