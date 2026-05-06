@@ -1,13 +1,42 @@
-import { Canvas, useFrame, useLoader, useThree } from "@react-three/fiber";
-import { Environment, Float, OrbitControls, Text } from "@react-three/drei";
-import { useMemo, useRef } from "react";
+import { Canvas, useFrame, useThree } from "@react-three/fiber";
+import { Environment, Float, OrbitControls, Text, useGLTF } from "@react-three/drei";
+import { Suspense, useMemo, useRef } from "react";
 import * as THREE from "three";
+import { clone as cloneSkeleton } from "three/examples/jsm/utils/SkeletonUtils.js";
 import type { RoomPublicState } from "../../shared/types";
 
 type Props = {
   room: RoomPublicState | null;
   playerSeat: number | null;
 };
+
+type Vec3 = [number, number, number];
+
+type CroupierModelConfig = {
+  id: string;
+  path: string;
+  height: number;
+  rotationY: number;
+  y: number;
+  z: number;
+};
+
+type LookTarget = {
+  node: THREE.Object3D;
+  baseX: number;
+  baseY: number;
+  pitchScale: number;
+  yawScale: number;
+};
+
+const CROUPIER_MODELS: CroupierModelConfig[] = [
+  { id: "croupier-01", path: "/assets/croupiers/show_breast_girl.glb", height: 2.08, rotationY: 0, y: -1.12, z: -0.02 },
+  { id: "croupier-02", path: "/assets/croupiers/school_girl_sit_on_the_chair.glb", height: 2.02, rotationY: 0, y: -1.08, z: -0.04 },
+  { id: "croupier-03", path: "/assets/croupiers/stella_girl.glb", height: 2.08, rotationY: 0, y: -1.12, z: -0.02 },
+  { id: "croupier-04", path: "/assets/croupiers/fashion_girl_asian_girl.glb", height: 2.08, rotationY: 0, y: -1.12, z: -0.02 },
+  { id: "croupier-05", path: "/assets/croupiers/spot_light_girl.glb", height: 2.04, rotationY: 0, y: -1.1, z: -0.02 },
+  { id: "croupier-06", path: "/assets/croupiers/new_ciity_mom.glb", height: 2.08, rotationY: 0, y: -1.12, z: -0.02 }
+];
 
 export function PokerTableScene({ room, playerSeat }: Props) {
   return (
@@ -73,12 +102,17 @@ function TableSurface() {
 }
 
 function DealerPortrait({ room }: { room: RoomPublicState | null }) {
-  const dealing = room?.street !== "waiting" && room?.street !== "settled";
+  const dealing = room ? room.street !== "waiting" && room.street !== "settled" : false;
+  const model = useMemo(() => selectCroupierModel(room?.roomCode), [room?.roomCode]);
+
   return (
     <Float speed={1.05} rotationIntensity={0.025} floatIntensity={0.05}>
-      <group position={[0, 0.22, -2.55]} scale={1.65}>
+      <group position={[0, 0.22, -2.55]} scale={1.72}>
         <CroupierBackdrop />
-        <CroupierHeroPortrait dealing={dealing} />
+        <Suspense fallback={<CroupierLoadingSilhouette />}>
+          <CroupierModel model={model} dealing={dealing} />
+        </Suspense>
+        <DealerCardFan dealing={dealing} />
       </group>
     </Float>
   );
@@ -86,7 +120,7 @@ function DealerPortrait({ room }: { room: RoomPublicState | null }) {
 
 function CroupierBackdrop() {
   return (
-    <group position={[0, 1.25, -0.52]}>
+    <group position={[0, 0.96, -0.52]}>
       <mesh position={[0, 0.12, 0]} rotation-x={Math.PI / 2}>
         <torusGeometry args={[0.62, 0.035, 32, 72]} />
         <meshStandardMaterial color="#c7974d" emissive="#3d2708" emissiveIntensity={0.24} roughness={0.34} metalness={0.6} />
@@ -103,60 +137,182 @@ function CroupierBackdrop() {
   );
 }
 
-function CroupierHeroPortrait({ dealing = false }: { dealing?: boolean }) {
-  const group = useRef<THREE.Group>(null);
-  const sourceTexture = useLoader(THREE.TextureLoader, "/assets/house-of-cards-croupier.png");
-  const texture = useMemo(() => {
-    const cropped = sourceTexture.clone();
-    cropped.colorSpace = THREE.SRGBColorSpace;
-    cropped.wrapS = THREE.ClampToEdgeWrapping;
-    cropped.wrapT = THREE.ClampToEdgeWrapping;
-    cropped.repeat.set(0.43, 0.9);
-    cropped.offset.set(0.43, 0.02);
-    cropped.needsUpdate = true;
-    return cropped;
-  }, [sourceTexture]);
-  const alphaMap = useMemo(() => {
-    const canvas = document.createElement("canvas");
-    canvas.width = 256;
-    canvas.height = 256;
-    const ctx = canvas.getContext("2d");
-    if (ctx) {
-      const gradient = ctx.createRadialGradient(128, 112, 72, 128, 112, 182);
-      gradient.addColorStop(0, "rgb(255,255,255)");
-      gradient.addColorStop(0.58, "rgb(255,255,255)");
-      gradient.addColorStop(1, "rgb(0,0,0)");
-      ctx.fillStyle = "black";
-      ctx.fillRect(0, 0, 256, 256);
-      ctx.fillStyle = gradient;
-      ctx.fillRect(0, 0, 256, 256);
-    }
-    const map = new THREE.CanvasTexture(canvas);
-    map.needsUpdate = true;
-    return map;
-  }, []);
+function CroupierModel({ model, dealing = false }: { model: CroupierModelConfig; dealing?: boolean }) {
+  const breatheRoot = useRef<THREE.Group>(null);
+  const lookRoot = useRef<THREE.Group>(null);
+  const lookTargets = useRef<LookTarget[]>([]);
+  const { scene } = useGLTF(model.path);
+  const normalizedScene = useMemo(() => {
+    const source = cloneSkeleton(scene) as THREE.Group;
+    prepareCroupierAsset(source);
+    lookTargets.current = collectLookTargets(source);
+
+    const box = new THREE.Box3().setFromObject(source);
+    const size = new THREE.Vector3();
+    const center = new THREE.Vector3();
+    box.getSize(size);
+    box.getCenter(center);
+
+    source.position.set(-center.x, -box.min.y, -center.z);
+
+    const normalized = new THREE.Group();
+    normalized.name = `${model.id}-normalized`;
+    normalized.scale.setScalar(model.height / Math.max(size.y, 0.001));
+    normalized.add(source);
+    return normalized;
+  }, [model.height, model.id, scene]);
 
   useFrame(({ pointer, clock }) => {
-    if (!group.current) return;
-    const pulse = dealing ? Math.sin(clock.elapsedTime * 2.2) * 0.006 : 0;
-    const yaw = THREE.MathUtils.clamp(pointer.x * 0.075, -0.07, 0.07);
-    const pitch = THREE.MathUtils.clamp(pointer.y * 0.04, -0.025, 0.035);
-    group.current.rotation.y = THREE.MathUtils.lerp(group.current.rotation.y, yaw, 0.06);
-    group.current.rotation.x = THREE.MathUtils.lerp(group.current.rotation.x, -pitch + pulse, 0.06);
+    const isCursorInFront = pointer.y > -0.68;
+    const targetYaw = isCursorInFront ? THREE.MathUtils.clamp(pointer.x * 0.18, -0.16, 0.16) : 0;
+    const targetPitch = isCursorInFront ? THREE.MathUtils.clamp(pointer.y * 0.055, -0.035, 0.05) : 0;
+    const dealPulse = dealing ? Math.sin(clock.elapsedTime * 3.15) * 0.5 + 0.5 : 0;
+    const idleFloat = Math.sin(clock.elapsedTime * 1.15) * 0.018 + dealPulse * 0.012;
+
+    if (breatheRoot.current) {
+      breatheRoot.current.position.y = THREE.MathUtils.lerp(breatheRoot.current.position.y, model.y + idleFloat, 0.05);
+    }
+
+    if (lookTargets.current.length > 0) {
+      for (const target of lookTargets.current) {
+        target.node.rotation.y = THREE.MathUtils.lerp(target.node.rotation.y, target.baseY + targetYaw * target.yawScale, 0.08);
+        target.node.rotation.x = THREE.MathUtils.lerp(target.node.rotation.x, target.baseX - targetPitch * target.pitchScale, 0.08);
+      }
+
+      if (lookRoot.current) {
+        lookRoot.current.rotation.y = THREE.MathUtils.lerp(lookRoot.current.rotation.y, model.rotationY + targetYaw * 0.22, 0.05);
+        lookRoot.current.rotation.x = THREE.MathUtils.lerp(lookRoot.current.rotation.x, -targetPitch * 0.18, 0.05);
+      }
+      return;
+    }
+
+    if (lookRoot.current) {
+      lookRoot.current.rotation.y = THREE.MathUtils.lerp(lookRoot.current.rotation.y, model.rotationY + targetYaw, 0.08);
+      lookRoot.current.rotation.x = THREE.MathUtils.lerp(lookRoot.current.rotation.x, -targetPitch, 0.08);
+    }
   });
 
   return (
-    <group ref={group} position={[0, 1.08, 0.42]} rotation={[0.03, 0, 0]}>
+    <group ref={breatheRoot} position={[0, model.y, model.z]}>
+      <group ref={lookRoot} rotation={[0, model.rotationY, 0]}>
+        <primitive object={normalizedScene} dispose={null} />
+      </group>
+    </group>
+  );
+}
+
+function DealerCardFan({ dealing = false }: { dealing?: boolean }) {
+  const dealCard = useRef<THREE.Group>(null);
+  const cardFan = useRef<THREE.Group>(null);
+
+  useFrame(({ clock }) => {
+    const dealPulse = dealing ? Math.sin(clock.elapsedTime * 3.15) * 0.5 + 0.5 : 0;
+
+    if (dealCard.current) {
+      dealCard.current.position.x = THREE.MathUtils.lerp(dealCard.current.position.x, 0.78 + dealPulse * 0.38, 0.08);
+      dealCard.current.position.z = THREE.MathUtils.lerp(dealCard.current.position.z, 0.62 + dealPulse * 0.16, 0.08);
+      dealCard.current.rotation.z = THREE.MathUtils.lerp(dealCard.current.rotation.z, -0.25 - dealPulse * 0.16, 0.08);
+    }
+
+    if (cardFan.current) {
+      cardFan.current.rotation.y = THREE.MathUtils.lerp(cardFan.current.rotation.y, -0.24 + dealPulse * 0.06, 0.06);
+      cardFan.current.position.y = THREE.MathUtils.lerp(cardFan.current.position.y, 0.6 + dealPulse * 0.025, 0.08);
+    }
+  });
+
+  return (
+    <group>
+      <group ref={cardFan} position={[-0.78, 0.6, 0.72]} rotation={[0.18, -0.24, 0.48]}>
+        {[-2, -1, 0, 1, 2].map((offset) => (
+          <MiniDealerCard key={offset} position={[offset * 0.06, 0, Math.abs(offset) * 0.012]} rotation={[0, 0, offset * -0.14]} red={offset % 2 === 0} />
+        ))}
+      </group>
+      <group ref={dealCard} position={[0.78, 0.32, 0.62]} rotation={[0.12, 0.06, -0.25]}>
+        <MiniDealerCard position={[0, 0, 0]} rotation={[0, 0, 0]} red />
+      </group>
+    </group>
+  );
+}
+
+function MiniDealerCard({ position, rotation, red = false }: { position: Vec3; rotation: Vec3; red?: boolean }) {
+  return (
+    <group position={position} rotation={rotation}>
       <mesh castShadow>
-        <planeGeometry args={[2.5, 2.78]} />
-        <meshBasicMaterial map={texture} alphaMap={alphaMap} transparent opacity={0.98} toneMapped={false} />
+        <boxGeometry args={[0.28, 0.016, 0.4]} />
+        <meshStandardMaterial color="#fff6e7" roughness={0.42} />
       </mesh>
-      <mesh position={[0, -0.06, -0.012]}>
-        <planeGeometry args={[2.62, 2.9]} />
-        <meshBasicMaterial color="#07110f" transparent opacity={0.18} />
+      <mesh position={[-0.08, 0.011, -0.12]}>
+        <boxGeometry args={[0.05, 0.006, 0.05]} />
+        <meshStandardMaterial color={red ? "#ba2732" : "#111816"} roughness={0.42} />
       </mesh>
     </group>
   );
+}
+
+function CroupierLoadingSilhouette() {
+  return (
+    <group position={[0, -0.5, 0.08]}>
+      <mesh castShadow position={[0, 0.74, 0.05]} scale={[0.52, 0.84, 0.34]}>
+        <capsuleGeometry args={[0.42, 0.68, 12, 24]} />
+        <meshStandardMaterial color="#0b1413" emissive="#12382f" emissiveIntensity={0.18} roughness={0.7} />
+      </mesh>
+      <mesh castShadow position={[0, 1.44, 0.08]}>
+        <sphereGeometry args={[0.34, 32, 24]} />
+        <meshStandardMaterial color="#14211e" emissive="#2b7d69" emissiveIntensity={0.12} roughness={0.64} />
+      </mesh>
+    </group>
+  );
+}
+
+function selectCroupierModel(roomCode?: string) {
+  if (!roomCode) return CROUPIER_MODELS[0];
+  return CROUPIER_MODELS[hashRoomCode(roomCode) % CROUPIER_MODELS.length];
+}
+
+function hashRoomCode(roomCode: string) {
+  let hash = 2166136261;
+  for (let index = 0; index < roomCode.length; index += 1) {
+    hash ^= roomCode.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return hash >>> 0;
+}
+
+function prepareCroupierAsset(root: THREE.Object3D) {
+  root.traverse((child) => {
+    if (!(child instanceof THREE.Mesh)) return;
+
+    child.castShadow = true;
+    child.receiveShadow = true;
+
+    const materials = Array.isArray(child.material) ? child.material : [child.material];
+    for (const material of materials) {
+      material.side = THREE.DoubleSide;
+      material.needsUpdate = true;
+    }
+  });
+}
+
+function collectLookTargets(root: THREE.Object3D): LookTarget[] {
+  const targets: LookTarget[] = [];
+
+  root.traverse((node) => {
+    const name = node.name.toLowerCase();
+    if (!name) return;
+    if (!/(head|neck|face|eye|gaze|look)/.test(name)) return;
+
+    const isEye = /eye|gaze|look/.test(name);
+    const isHead = /head|face/.test(name);
+    targets.push({
+      node,
+      baseX: node.rotation.x,
+      baseY: node.rotation.y,
+      pitchScale: isEye ? 0.65 : isHead ? 1 : 0.35,
+      yawScale: isEye ? 0.55 : isHead ? 1 : 0.35
+    });
+  });
+
+  return targets.slice(0, 6);
 }
 
 function CommunityCards({ room }: { room: RoomPublicState | null }) {
