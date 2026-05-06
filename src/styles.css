@@ -385,12 +385,16 @@ input {
 }
 
 .rules-modal {
-  width: min(620px, 100%);
+  width: min(860px, 100%);
+  max-height: min(780px, calc(100dvh - 40px));
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
   border: 1px solid rgba(232, 202, 128, 0.26);
   border-radius: 12px;
   background: rgba(8, 19, 16, 0.94);
   box-shadow: 0 28px 80px rgba(0, 0, 0, 0.46);
   padding: 20px;
+  overflow: hidden;
 }
 
 .modal-heading {
@@ -414,6 +418,86 @@ input {
   border-radius: 8px;
   background: rgba(0, 0, 0, 0.18);
   padding: 14px;
+}
+
+.rules-content {
+  display: grid;
+  gap: 14px;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 6px;
+}
+
+.hand-rankings {
+  display: grid;
+  gap: 10px;
+}
+
+.hand-rank-row {
+  display: grid;
+  grid-template-columns: minmax(180px, 0.62fr) minmax(250px, 1fr);
+  gap: 14px;
+  align-items: center;
+  border: 1px solid rgba(232, 202, 128, 0.14);
+  border-radius: 10px;
+  background:
+    linear-gradient(90deg, rgba(232, 202, 128, 0.07), transparent 52%),
+    rgba(0, 0, 0, 0.18);
+  padding: 12px;
+}
+
+.hand-rank-copy {
+  display: grid;
+  gap: 7px;
+}
+
+.hand-rank-copy strong {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #f8edd5;
+  font-size: 15px;
+  text-transform: uppercase;
+}
+
+.hand-rank-copy strong span {
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid rgba(232, 202, 128, 0.28);
+  border-radius: 999px;
+  color: #15120b;
+  background: #e8ca80;
+  font-size: 13px;
+}
+
+.hand-rank-copy small {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.rule-card-samples {
+  display: flex;
+  gap: 7px;
+  justify-content: flex-end;
+  min-width: 0;
+}
+
+.rule-card-samples .card-view {
+  width: 42px;
+  height: 58px;
+  border-radius: 7px;
+  box-shadow: 0 10px 18px rgba(0, 0, 0, 0.24);
+}
+
+.rule-card-samples .card-view strong {
+  font-size: 17px;
+}
+
+.rule-card-samples .card-view span {
+  font-size: 10px;
 }
 
 .game-shell {
@@ -1053,6 +1137,21 @@ label {
 
   .lobby-command-row {
     grid-template-columns: 1fr;
+  }
+
+  .rules-modal {
+    padding: 16px;
+  }
+
+  .rules-grid,
+  .hand-rank-row {
+    grid-template-columns: 1fr;
+  }
+
+  .rule-card-samples {
+    justify-content: flex-start;
+    overflow-x: auto;
+    padding-bottom: 4px;
   }
 
   .summary-grid {

@@ -20,7 +20,7 @@ export function PokerTableScene({ room, playerSeat }: Props) {
       <CameraTarget />
       <TableSurface />
       <CommunityCards room={room} />
-      <Dealer />
+      <Dealer room={room} />
       <ChipStacks room={room} />
       <SeatMarkers room={room} playerSeat={playerSeat} />
       <Environment preset="night" />
@@ -66,59 +66,205 @@ function TableSurface() {
   );
 }
 
-function Dealer() {
+function Dealer({ room }: { room: RoomPublicState | null }) {
   const head = useRef<THREE.Group>(null);
   const eyeLeft = useRef<THREE.Mesh>(null);
   const eyeRight = useRef<THREE.Mesh>(null);
+  const torso = useRef<THREE.Group>(null);
+  const leftForearm = useRef<THREE.Group>(null);
+  const rightForearm = useRef<THREE.Group>(null);
+  const cardFan = useRef<THREE.Group>(null);
+  const dealCard = useRef<THREE.Group>(null);
 
-  useFrame(({ pointer }) => {
-    const yaw = THREE.MathUtils.clamp(pointer.x * 0.35, -0.28, 0.28);
-    const pitch = THREE.MathUtils.clamp(pointer.y * 0.18, -0.08, 0.12);
+  useFrame(({ pointer, clock }) => {
+    const frontY = pointer.y > -0.82 ? pointer.y : -0.25;
+    const yaw = THREE.MathUtils.clamp(pointer.x * 0.36, -0.32, 0.32);
+    const pitch = THREE.MathUtils.clamp(frontY * 0.2, -0.1, 0.14);
+    const dealing = room?.street !== "waiting" && room?.street !== "settled";
+    const dealPulse = dealing ? Math.sin(clock.elapsedTime * (room?.street === "preflop" ? 3.4 : 1.8)) * 0.5 + 0.5 : 0;
+
     if (head.current) {
       head.current.rotation.y = THREE.MathUtils.lerp(head.current.rotation.y, yaw, 0.08);
       head.current.rotation.x = THREE.MathUtils.lerp(head.current.rotation.x, -pitch, 0.08);
     }
+    if (torso.current) {
+      torso.current.rotation.y = THREE.MathUtils.lerp(torso.current.rotation.y, yaw * 0.16, 0.04);
+    }
     [eyeLeft.current, eyeRight.current].forEach((eye) => {
       if (eye) {
-        eye.position.x = THREE.MathUtils.lerp(eye.position.x, pointer.x * 0.025, 0.12);
-        eye.position.y = THREE.MathUtils.lerp(eye.position.y, 0.02 + pointer.y * 0.018, 0.12);
+        eye.position.x = THREE.MathUtils.lerp(eye.position.x, pointer.x * 0.022, 0.12);
+        eye.position.y = THREE.MathUtils.lerp(eye.position.y, 0.02 + frontY * 0.016, 0.12);
       }
     });
+    if (leftForearm.current) {
+      leftForearm.current.rotation.z = THREE.MathUtils.lerp(leftForearm.current.rotation.z, 0.7 + dealPulse * 0.08, 0.06);
+    }
+    if (rightForearm.current) {
+      rightForearm.current.rotation.z = THREE.MathUtils.lerp(rightForearm.current.rotation.z, -0.72 - dealPulse * 0.12, 0.08);
+      rightForearm.current.rotation.x = THREE.MathUtils.lerp(rightForearm.current.rotation.x, 0.08 + dealPulse * 0.12, 0.08);
+    }
+    if (cardFan.current) {
+      cardFan.current.rotation.y = THREE.MathUtils.lerp(cardFan.current.rotation.y, -0.32 + dealPulse * 0.06, 0.05);
+    }
+    if (dealCard.current) {
+      dealCard.current.position.x = THREE.MathUtils.lerp(dealCard.current.position.x, 0.82 + dealPulse * 0.36, 0.08);
+      dealCard.current.position.z = THREE.MathUtils.lerp(dealCard.current.position.z, 0.7 + dealPulse * 0.12, 0.08);
+      dealCard.current.rotation.z = THREE.MathUtils.lerp(dealCard.current.rotation.z, -0.26 - dealPulse * 0.12, 0.08);
+    }
   });
 
   return (
-    <Float speed={1.2} rotationIntensity={0.04} floatIntensity={0.09}>
-      <group position={[0, 0.58, -2.7]}>
-        <mesh castShadow position={[0, 0.48, 0]}>
-          <capsuleGeometry args={[0.48, 0.72, 12, 24]} />
-          <meshStandardMaterial color="#1a1f27" roughness={0.5} />
+    <Float speed={1.1} rotationIntensity={0.035} floatIntensity={0.07}>
+      <group position={[0, 0.5, -2.95]}>
+        <mesh receiveShadow position={[0, -0.04, 0.18]} rotation-x={-Math.PI / 2}>
+          <circleGeometry args={[1.28, 48]} />
+          <meshStandardMaterial color="#07110f" transparent opacity={0.32} />
         </mesh>
-        <group ref={head} position={[0, 1.24, 0.05]}>
-          <mesh castShadow>
+
+        <group ref={torso}>
+          <mesh castShadow position={[0, 0.58, 0]} scale={[0.88, 1.08, 0.55]}>
+            <capsuleGeometry args={[0.48, 0.72, 12, 28]} />
+            <meshStandardMaterial color="#11161b" roughness={0.48} metalness={0.08} />
+          </mesh>
+          <mesh castShadow position={[0, 0.66, 0.33]} scale={[0.5, 0.86, 0.08]}>
+            <boxGeometry args={[1, 1, 1]} />
+            <meshStandardMaterial color="#f1e2cc" roughness={0.62} />
+          </mesh>
+          <mesh castShadow position={[-0.2, 0.72, 0.38]} rotation-z={-0.14} scale={[0.14, 0.8, 0.05]}>
+            <boxGeometry args={[1, 1, 1]} />
+            <meshStandardMaterial color="#0b0f12" roughness={0.5} />
+          </mesh>
+          <mesh castShadow position={[0.2, 0.72, 0.38]} rotation-z={0.14} scale={[0.14, 0.8, 0.05]}>
+            <boxGeometry args={[1, 1, 1]} />
+            <meshStandardMaterial color="#0b0f12" roughness={0.5} />
+          </mesh>
+          <group position={[0, 1.06, 0.42]}>
+            <mesh castShadow position={[-0.09, 0, 0]} rotation-z={Math.PI / 2}>
+              <coneGeometry args={[0.1, 0.18, 3]} />
+              <meshStandardMaterial color="#07090a" roughness={0.42} />
+            </mesh>
+            <mesh castShadow position={[0.09, 0, 0]} rotation-z={-Math.PI / 2}>
+              <coneGeometry args={[0.1, 0.18, 3]} />
+              <meshStandardMaterial color="#07090a" roughness={0.42} />
+            </mesh>
+            <mesh castShadow>
+              <sphereGeometry args={[0.055, 16, 16]} />
+              <meshStandardMaterial color="#07090a" roughness={0.42} />
+            </mesh>
+          </group>
+          <mesh position={[-0.24, 0.61, 0.43]} rotation-z={-0.22}>
+            <cylinderGeometry args={[0.035, 0.035, 0.02, 18]} />
+            <meshStandardMaterial color="#d8aa49" emissive="#4a310c" emissiveIntensity={0.18} roughness={0.36} metalness={0.6} />
+          </mesh>
+        </group>
+
+        <mesh castShadow position={[0, 1.22, 0.08]}>
+          <cylinderGeometry args={[0.13, 0.16, 0.24, 18]} />
+          <meshStandardMaterial color="#d6a174" roughness={0.5} />
+        </mesh>
+
+        <group ref={head} position={[0, 1.45, 0.12]}>
+          <mesh castShadow scale={[0.9, 1.05, 0.82]}>
             <sphereGeometry args={[0.42, 32, 32]} />
             <meshStandardMaterial color="#d9a579" roughness={0.48} />
           </mesh>
-          <mesh position={[0, 0.28, -0.02]}>
-            <sphereGeometry args={[0.45, 32, 12, 0, Math.PI * 2, 0, Math.PI / 2]} />
-            <meshStandardMaterial color="#16100d" roughness={0.7} />
+          <mesh castShadow position={[0, 0.22, -0.04]} scale={[1.08, 0.72, 0.94]}>
+            <sphereGeometry args={[0.43, 32, 14, 0, Math.PI * 2, 0, Math.PI / 1.45]} />
+            <meshStandardMaterial color="#5c2f1a" roughness={0.72} />
           </mesh>
-          <mesh ref={eyeLeft} position={[-0.14, 0.03, 0.38]}>
-            <sphereGeometry args={[0.035, 16, 16]} />
+          <mesh castShadow position={[-0.37, -0.02, -0.02]} rotation-z={0.1}>
+            <capsuleGeometry args={[0.13, 0.44, 10, 14]} />
+            <meshStandardMaterial color="#6e391f" roughness={0.76} />
+          </mesh>
+          <mesh castShadow position={[0.37, -0.02, -0.02]} rotation-z={-0.1}>
+            <capsuleGeometry args={[0.13, 0.44, 10, 14]} />
+            <meshStandardMaterial color="#6e391f" roughness={0.76} />
+          </mesh>
+          <mesh position={[-0.15, 0.04, 0.34]}>
+            <sphereGeometry args={[0.055, 16, 16]} />
+            <meshStandardMaterial color="#f7ead9" roughness={0.35} />
+          </mesh>
+          <mesh position={[0.15, 0.04, 0.34]}>
+            <sphereGeometry args={[0.055, 16, 16]} />
+            <meshStandardMaterial color="#f7ead9" roughness={0.35} />
+          </mesh>
+          <mesh ref={eyeLeft} position={[-0.15, 0.03, 0.385]}>
+            <sphereGeometry args={[0.026, 16, 16]} />
             <meshStandardMaterial color="#101412" />
           </mesh>
-          <mesh ref={eyeRight} position={[0.14, 0.03, 0.38]}>
-            <sphereGeometry args={[0.035, 16, 16]} />
+          <mesh ref={eyeRight} position={[0.15, 0.03, 0.385]}>
+            <sphereGeometry args={[0.026, 16, 16]} />
             <meshStandardMaterial color="#101412" />
+          </mesh>
+          <mesh position={[-0.15, 0.14, 0.37]} rotation-z={0.14}>
+            <boxGeometry args={[0.16, 0.018, 0.018]} />
+            <meshStandardMaterial color="#3a1b11" roughness={0.6} />
+          </mesh>
+          <mesh position={[0.15, 0.14, 0.37]} rotation-z={-0.14}>
+            <boxGeometry args={[0.16, 0.018, 0.018]} />
+            <meshStandardMaterial color="#3a1b11" roughness={0.6} />
+          </mesh>
+          <mesh position={[0, -0.17, 0.38]} scale={[1, 0.42, 0.32]}>
+            <sphereGeometry args={[0.08, 18, 10]} />
+            <meshStandardMaterial color="#9c332e" roughness={0.5} />
+          </mesh>
+          <mesh position={[-0.44, -0.08, 0.08]} rotation-x={Math.PI / 2}>
+            <torusGeometry args={[0.035, 0.006, 8, 16]} />
+            <meshStandardMaterial color="#d8aa49" roughness={0.3} metalness={0.78} />
+          </mesh>
+          <mesh position={[0.44, -0.08, 0.08]} rotation-x={Math.PI / 2}>
+            <torusGeometry args={[0.035, 0.006, 8, 16]} />
+            <meshStandardMaterial color="#d8aa49" roughness={0.3} metalness={0.78} />
           </mesh>
         </group>
-        <mesh castShadow position={[-0.52, 0.48, 0.28]} rotation-z={0.7}>
-          <capsuleGeometry args={[0.08, 0.7, 8, 12]} />
-          <meshStandardMaterial color="#d9a579" roughness={0.5} />
-        </mesh>
-        <mesh castShadow position={[0.52, 0.48, 0.28]} rotation-z={-0.7}>
-          <capsuleGeometry args={[0.08, 0.7, 8, 12]} />
-          <meshStandardMaterial color="#d9a579" roughness={0.5} />
-        </mesh>
+
+        <group ref={leftForearm} position={[-0.54, 0.78, 0.34]} rotation={[0.1, 0.1, 0.7]}>
+          <mesh castShadow position={[0, -0.28, 0]}>
+            <capsuleGeometry args={[0.075, 0.6, 8, 14]} />
+            <meshStandardMaterial color="#d8a377" roughness={0.5} />
+          </mesh>
+          <mesh castShadow position={[0, -0.64, 0.04]} scale={[1.22, 0.66, 0.36]}>
+            <sphereGeometry args={[0.11, 18, 12]} />
+            <meshStandardMaterial color="#d8a377" roughness={0.5} />
+          </mesh>
+        </group>
+
+        <group ref={rightForearm} position={[0.56, 0.76, 0.36]} rotation={[0.08, -0.04, -0.72]}>
+          <mesh castShadow position={[0, -0.3, 0]}>
+            <capsuleGeometry args={[0.075, 0.62, 8, 14]} />
+            <meshStandardMaterial color="#d8a377" roughness={0.5} />
+          </mesh>
+          <mesh castShadow position={[0, -0.68, 0.04]} scale={[1.18, 0.6, 0.34]}>
+            <sphereGeometry args={[0.11, 18, 12]} />
+            <meshStandardMaterial color="#d8a377" roughness={0.5} />
+          </mesh>
+        </group>
+
+        <group ref={cardFan} position={[-0.83, 0.73, 0.68]} rotation={[0.16, -0.32, 0.5]}>
+          {[-1, 0, 1].map((offset) => (
+            <group key={offset} position={[offset * 0.075, 0, Math.abs(offset) * 0.018]} rotation-z={offset * -0.22}>
+              <mesh castShadow>
+                <boxGeometry args={[0.28, 0.018, 0.4]} />
+                <meshStandardMaterial color="#f8f0df" roughness={0.45} />
+              </mesh>
+              <mesh position={[-0.07, 0.012, -0.12]}>
+                <boxGeometry args={[0.055, 0.006, 0.055]} />
+                <meshStandardMaterial color={offset === 0 ? "#111816" : "#ba2732"} roughness={0.42} />
+              </mesh>
+            </group>
+          ))}
+        </group>
+
+        <group ref={dealCard} position={[0.82, 0.4, 0.7]} rotation={[0.12, 0.06, -0.26]}>
+          <mesh castShadow>
+            <boxGeometry args={[0.34, 0.016, 0.48]} />
+            <meshStandardMaterial color="#f8f0df" roughness={0.44} />
+          </mesh>
+          <mesh position={[-0.1, 0.011, -0.16]}>
+            <boxGeometry args={[0.06, 0.006, 0.06]} />
+            <meshStandardMaterial color="#ba2732" roughness={0.42} />
+          </mesh>
+        </group>
       </group>
     </Float>
   );

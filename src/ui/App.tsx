@@ -6,7 +6,8 @@ import type {
   GameSnapshot,
   PokerActionPayload,
   ServerToClientEvents,
-  SfxName
+  SfxName,
+  Card
 } from "../../shared/types";
 import { PokerTableScene } from "./PokerTableScene";
 import { ActionBar } from "./components/ActionBar";
@@ -272,6 +273,9 @@ export function App() {
           <div className="game-status-strip">
             <span>{room.street.toUpperCase()}</span>
             <BalanceAmount amount={player.accountBalance} />
+            <button className="icon-toggle rules-button" onClick={() => setRulesOpen(true)} aria-label="Open poker rules" title="Poker rules">
+              <RulesIcon />
+            </button>
             <IconSoundButton soundEnabled={soundEnabled} setSoundEnabled={setSoundEnabled} />
           </div>
         </div>
@@ -308,6 +312,7 @@ export function App() {
         </div>
 
         {notice ? <div className="notice game-notice">{notice}</div> : null}
+        {rulesOpen ? <RulesModal onClose={() => setRulesOpen(false)} /> : null}
       </section>
     </main>
   );
@@ -331,6 +336,119 @@ function BrandLockup({ title, compact = false }: { title: string; compact?: bool
   );
 }
 
+const handRankings: Array<{ name: string; description: string; cards: Card[] }> = [
+  {
+    name: "Royal flush",
+    description: "A, K, Q, J, T in the same suit. The strongest possible hand.",
+    cards: [
+      { rank: "A", suit: "spades" },
+      { rank: "K", suit: "spades" },
+      { rank: "Q", suit: "spades" },
+      { rank: "J", suit: "spades" },
+      { rank: "T", suit: "spades" }
+    ]
+  },
+  {
+    name: "Straight flush",
+    description: "Five connected cards in the same suit.",
+    cards: [
+      { rank: "9", suit: "hearts" },
+      { rank: "8", suit: "hearts" },
+      { rank: "7", suit: "hearts" },
+      { rank: "6", suit: "hearts" },
+      { rank: "5", suit: "hearts" }
+    ]
+  },
+  {
+    name: "Four of a kind",
+    description: "Four cards with the same rank, plus one kicker.",
+    cards: [
+      { rank: "A", suit: "spades" },
+      { rank: "A", suit: "hearts" },
+      { rank: "A", suit: "diamonds" },
+      { rank: "A", suit: "clubs" },
+      { rank: "9", suit: "spades" }
+    ]
+  },
+  {
+    name: "Full house",
+    description: "Three of one rank and two of another rank.",
+    cards: [
+      { rank: "K", suit: "spades" },
+      { rank: "K", suit: "hearts" },
+      { rank: "K", suit: "clubs" },
+      { rank: "8", suit: "diamonds" },
+      { rank: "8", suit: "clubs" }
+    ]
+  },
+  {
+    name: "Flush",
+    description: "Five cards in the same suit, not connected in order.",
+    cards: [
+      { rank: "A", suit: "diamonds" },
+      { rank: "J", suit: "diamonds" },
+      { rank: "8", suit: "diamonds" },
+      { rank: "4", suit: "diamonds" },
+      { rank: "2", suit: "diamonds" }
+    ]
+  },
+  {
+    name: "Straight",
+    description: "Five connected cards, mixed suits allowed.",
+    cards: [
+      { rank: "9", suit: "clubs" },
+      { rank: "8", suit: "diamonds" },
+      { rank: "7", suit: "spades" },
+      { rank: "6", suit: "hearts" },
+      { rank: "5", suit: "clubs" }
+    ]
+  },
+  {
+    name: "Three of a kind",
+    description: "Three cards with the same rank, plus two kickers.",
+    cards: [
+      { rank: "Q", suit: "spades" },
+      { rank: "Q", suit: "hearts" },
+      { rank: "Q", suit: "clubs" },
+      { rank: "7", suit: "diamonds" },
+      { rank: "2", suit: "clubs" }
+    ]
+  },
+  {
+    name: "Two pair",
+    description: "Two cards of one rank, two cards of another rank, plus one kicker.",
+    cards: [
+      { rank: "J", suit: "spades" },
+      { rank: "J", suit: "diamonds" },
+      { rank: "4", suit: "hearts" },
+      { rank: "4", suit: "clubs" },
+      { rank: "A", suit: "clubs" }
+    ]
+  },
+  {
+    name: "One pair",
+    description: "Two cards with the same rank, plus three kickers.",
+    cards: [
+      { rank: "T", suit: "spades" },
+      { rank: "T", suit: "hearts" },
+      { rank: "9", suit: "clubs" },
+      { rank: "5", suit: "diamonds" },
+      { rank: "2", suit: "spades" }
+    ]
+  },
+  {
+    name: "High card",
+    description: "No made combination. The highest card decides, then kickers.",
+    cards: [
+      { rank: "A", suit: "hearts" },
+      { rank: "Q", suit: "clubs" },
+      { rank: "9", suit: "diamonds" },
+      { rank: "6", suit: "spades" },
+      { rank: "3", suit: "clubs" }
+    ]
+  }
+];
+
 function RulesModal({ onClose }: { onClose: () => void }) {
   return (
     <div className="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="rules-title">
@@ -344,22 +462,43 @@ function RulesModal({ onClose }: { onClose: () => void }) {
             <CloseIcon />
           </button>
         </div>
-        <div className="rules-grid">
-          <div>
-            <strong>1. Hole cards</strong>
-            <span>Each player gets two private cards. Only you can see yours.</span>
+        <div className="rules-content">
+          <div className="rules-grid">
+            <div>
+              <strong>Hole cards</strong>
+              <span>Each player gets two private cards. Only you can see yours.</span>
+            </div>
+            <div>
+              <strong>Community board</strong>
+              <span>The table reveals flop, turn, and river for everyone to use.</span>
+            </div>
+            <div>
+              <strong>Betting rounds</strong>
+              <span>Pre-flop, flop, turn, river, then showdown if more than one player remains.</span>
+            </div>
+            <div>
+              <strong>Best five cards</strong>
+              <span>Use any five from your two cards and the five community cards.</span>
+            </div>
           </div>
-          <div>
-            <strong>2. Community board</strong>
-            <span>The table reveals flop, turn, and river for everyone to use.</span>
-          </div>
-          <div>
-            <strong>3. Betting</strong>
-            <span>Fold, check, call, bet, raise, or go all-in when it is your turn.</span>
-          </div>
-          <div>
-            <strong>4. Showdown</strong>
-            <span>The best five-card hand wins. Split pots are handled by the server.</span>
+
+          <div className="hand-rankings" aria-label="Poker hand rankings from strongest to weakest">
+            {handRankings.map((hand, index) => (
+              <article className="hand-rank-row" key={hand.name}>
+                <div className="hand-rank-copy">
+                  <strong>
+                    <span>{index + 1}</span>
+                    {hand.name}
+                  </strong>
+                  <small>{hand.description}</small>
+                </div>
+                <div className="rule-card-samples" aria-label={`${hand.name} sample cards`}>
+                  {hand.cards.map((card, cardIndex) => (
+                    <CardView card={card} key={`${hand.name}-${card.rank}-${card.suit}-${cardIndex}`} />
+                  ))}
+                </div>
+              </article>
+            ))}
           </div>
         </div>
       </div>
