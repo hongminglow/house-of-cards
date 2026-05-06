@@ -29,12 +29,12 @@ type LookTarget = {
 };
 
 const CROUPIER_MODELS: CroupierModelConfig[] = [
-  { id: "croupier-01", path: "/assets/croupiers/show_breast_girl.glb", height: 2.92, rotationY: 0, y: -1.98, z: -0.18 },
-  { id: "croupier-02", path: "/assets/croupiers/school_girl_sit_on_the_chair.glb", height: 2.82, rotationY: 0, y: -1.9, z: -0.2 },
-  { id: "croupier-03", path: "/assets/croupiers/stella_girl.glb", height: 2.92, rotationY: 0, y: -1.98, z: -0.18 },
-  { id: "croupier-04", path: "/assets/croupiers/fashion_girl_asian_girl.glb", height: 2.92, rotationY: 0, y: -1.98, z: -0.18 },
-  { id: "croupier-05", path: "/assets/croupiers/free_cure_girl_3.glb", height: 2.86, rotationY: 0, y: -1.94, z: -0.18 },
-  { id: "croupier-06", path: "/assets/croupiers/new_ciity_mom.glb", height: 2.92, rotationY: 0, y: -1.98, z: -0.18 }
+  { id: "croupier-aurora", path: "/assets/croupiers/croupier-aurora.glb", height: 2.92, rotationY: 0, y: -1.98, z: -0.18 },
+  { id: "croupier-mika", path: "/assets/croupiers/croupier-mika.glb", height: 2.82, rotationY: 0, y: -1.9, z: -0.2 },
+  { id: "croupier-stella", path: "/assets/croupiers/croupier-stella.glb", height: 2.92, rotationY: 0, y: -1.98, z: -0.18 },
+  { id: "croupier-yuna", path: "/assets/croupiers/croupier-yuna.glb", height: 2.92, rotationY: 0, y: -1.98, z: -0.18 },
+  { id: "croupier-serena", path: "/assets/croupiers/croupier-serena.glb", height: 2.86, rotationY: 0, y: -1.94, z: -0.18 },
+  { id: "croupier-celeste", path: "/assets/croupiers/croupier-celeste.glb", height: 2.92, rotationY: 0, y: -1.98, z: -0.18 }
 ];
 
 export function PokerTableScene({ room, playerSeat, onCroupierReady }: Props) {

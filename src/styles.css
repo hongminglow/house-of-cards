@@ -12,6 +12,9 @@
   --green: #75d8b5;
   --red: #d96d72;
   --muted: #b9aa8e;
+  --control-border: rgba(232, 202, 128, 0.28);
+  --control-hover: rgba(232, 202, 128, 0.19);
+  --control-focus: rgba(117, 216, 181, 0.48);
 }
 
 * {
@@ -52,6 +55,11 @@ input {
 }
 
 button {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
   border: 1px solid var(--border);
   background: rgba(232, 202, 128, 0.11);
   color: #f6ead4;
@@ -59,11 +67,45 @@ button {
   min-height: 42px;
   padding: 0 14px;
   cursor: pointer;
+  user-select: none;
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 10px 22px rgba(0, 0, 0, 0.18);
+  transition:
+    transform 140ms ease,
+    border-color 140ms ease,
+    background 140ms ease,
+    color 140ms ease,
+    box-shadow 140ms ease,
+    opacity 140ms ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+button:not(:disabled):hover {
+  border-color: rgba(232, 202, 128, 0.52);
+  background: var(--control-hover);
+  color: #fff4d8;
+  transform: translateY(-1px);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 16px 30px rgba(0, 0, 0, 0.26), 0 0 0 1px rgba(232, 202, 128, 0.1);
+}
+
+button:not(:disabled):active {
+  transform: translateY(0);
+  box-shadow: inset 0 1px 4px rgba(0, 0, 0, 0.26), 0 8px 18px rgba(0, 0, 0, 0.2);
+}
+
+button:focus-visible,
+input:focus-visible {
+  outline: 2px solid var(--control-focus);
+  outline-offset: 2px;
 }
 
 button:disabled {
   opacity: 0.42;
   cursor: not-allowed;
+  box-shadow: none;
+  transform: none;
 }
 
 input {
@@ -75,6 +117,25 @@ input {
   min-height: 42px;
   padding: 0 12px;
   outline: none;
+  transition:
+    border-color 140ms ease,
+    background 140ms ease,
+    box-shadow 140ms ease;
+}
+
+input:not(:disabled):hover {
+  border-color: rgba(232, 202, 128, 0.34);
+  background: rgba(0, 0, 0, 0.3);
+}
+
+input[type="range"] {
+  cursor: pointer;
+  accent-color: var(--accent);
+}
+
+input:disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
 }
 
 .app-shell {
@@ -256,6 +317,13 @@ input {
   border-color: rgba(232, 202, 128, 0.24);
   background: rgba(14, 32, 27, 0.78);
   text-align: left;
+}
+
+.room-row:not(:disabled):hover {
+  border-color: rgba(117, 216, 181, 0.48);
+  background:
+    linear-gradient(90deg, rgba(117, 216, 181, 0.16), rgba(232, 202, 128, 0.08)),
+    rgba(14, 32, 27, 0.88);
 }
 
 .room-row span:first-child {
@@ -882,10 +950,17 @@ label {
 
 .primary-button {
   width: 100%;
-  background: #e8ca80;
+  background: linear-gradient(180deg, #f6dda0 0%, #e8ca80 52%, #cda65d 100%);
   color: #15120b;
   border-color: transparent;
   font-weight: 800;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.42), 0 18px 34px rgba(232, 202, 128, 0.18), 0 10px 22px rgba(0, 0, 0, 0.24);
+}
+
+.primary-button:not(:disabled):hover {
+  background: linear-gradient(180deg, #fff0bd 0%, #efd68f 48%, #d4ae65 100%);
+  color: #0e0b07;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.56), 0 22px 42px rgba(232, 202, 128, 0.28), 0 0 0 1px rgba(255, 239, 188, 0.22);
 }
 
 .ghost-button,
@@ -894,10 +969,29 @@ label {
   margin-top: 10px;
 }
 
+.ghost-button {
+  border-color: rgba(232, 202, 128, 0.26);
+  background: rgba(232, 202, 128, 0.1);
+  color: #f8edd5;
+}
+
+.ghost-button:not(:disabled):hover {
+  border-color: rgba(117, 216, 181, 0.45);
+  background: rgba(117, 216, 181, 0.14);
+  color: #d9fff0;
+}
+
 .danger-button {
   border-color: rgba(217, 109, 114, 0.35);
   color: #ffd5d7;
   background: rgba(217, 109, 114, 0.12);
+}
+
+.danger-button:not(:disabled):hover {
+  border-color: rgba(217, 109, 114, 0.58);
+  background: rgba(217, 109, 114, 0.2);
+  color: #ffe7e8;
+  box-shadow: 0 16px 32px rgba(217, 109, 114, 0.16), 0 10px 22px rgba(0, 0, 0, 0.24);
 }
 
 .balance-line {
@@ -1029,132 +1123,30 @@ label {
   height: 16px;
 }
 
-.face-card {
-  position: relative;
-  width: 78%;
-  height: 88%;
-  border: 1px solid currentColor;
-  border-radius: 4px;
+.card-view.court-glyph-card {
   overflow: hidden;
+  border: 1px solid rgba(28, 23, 18, 0.16);
   background:
-    linear-gradient(135deg, rgba(232, 202, 128, 0.38), transparent 42%),
-    linear-gradient(315deg, rgba(17, 24, 22, 0.08), transparent 45%),
-    rgba(255, 255, 255, 0.38);
+    radial-gradient(circle at 50% 42%, rgba(255, 255, 255, 0.72), transparent 44%),
+    linear-gradient(145deg, #fffaf0, #eee2cd);
+  box-shadow: 0 12px 20px rgba(0, 0, 0, 0.28), inset 0 0 0 2px rgba(255, 255, 255, 0.44);
 }
 
-.face-card::before,
-.face-card::after {
-  position: absolute;
-  left: 8%;
-  width: 84%;
-  height: 1px;
-  content: "";
-  background: currentColor;
-  opacity: 0.34;
+.court-card-glyph {
+  display: block;
+  width: 100%;
+  height: 100%;
+  font-family: "Segoe UI Symbol", "Noto Sans Symbols 2", "Apple Symbols", "DejaVu Sans", serif;
+  font-size: 82px;
+  line-height: 0.94;
+  text-align: center;
+  letter-spacing: 0;
+  filter: drop-shadow(0 12px 18px rgba(0, 0, 0, 0.28));
 }
 
-.face-card::before {
-  top: 49%;
-  transform: rotate(-18deg);
-}
-
-.face-card::after {
-  top: 51%;
-  transform: rotate(18deg);
-}
-
-.court-half {
-  position: absolute;
-  left: 50%;
-  display: grid;
-  justify-items: center;
-  width: 72%;
-  height: 42%;
-  transform: translateX(-50%);
-}
-
-.court-top {
-  top: 4px;
-}
-
-.court-bottom {
-  bottom: 4px;
-  transform: translateX(-50%) rotate(180deg);
-}
-
-.court-crown {
-  display: flex;
-  gap: 1px;
-  align-items: flex-end;
-  height: 8px;
-}
-
-.court-crown span {
-  width: 4px;
-  height: 7px;
-  clip-path: polygon(50% 0, 100% 100%, 0 100%);
-  background: #d8aa49;
-}
-
-.court-q .court-crown span {
-  background: #c9b0d8;
-}
-
-.court-j .court-crown span {
-  background: #76a9cb;
-}
-
-.court-face {
-  width: 13px;
-  height: 13px;
-  margin-top: 1px;
-  border: 1px solid rgba(61, 31, 19, 0.2);
-  border-radius: 50% 50% 45% 45%;
-  background:
-    radial-gradient(circle at 35% 42%, rgba(61, 31, 19, 0.78) 0 6%, transparent 7%),
-    radial-gradient(circle at 65% 42%, rgba(61, 31, 19, 0.78) 0 6%, transparent 7%),
-    linear-gradient(#ddb58d, #c98d67);
-}
-
-.court-robe {
-  display: grid;
-  place-items: center;
-  width: 25px;
-  height: 14px;
-  margin-top: -1px;
-  border-radius: 10px 10px 4px 4px;
-  background: currentColor;
-  color: #fffaf0;
-}
-
-.court-robe .suit-mark {
-  width: 8px;
-  height: 8px;
-}
-
-.court-band {
-  position: absolute;
-  inset: 50% auto auto 50%;
-  z-index: 2;
-  display: grid;
-  place-items: center;
-  width: 14px;
-  height: 14px;
-  transform: translate(-50%, -50%);
-}
-
-.court-band .suit-mark {
-  width: 10px;
-  height: 10px;
-}
-
-.face-card > strong {
-  position: absolute;
-  right: 4px;
-  bottom: 3px;
-  font-size: 11px;
-  line-height: 1;
-  font-weight: 900;
+.rule-card-samples .court-card-glyph {
+  font-size: 72px;
+  line-height: 0.94;
 }
 
 .action-bar {
@@ -1181,9 +1173,28 @@ label {
   gap: 8px;
 }
 
+.action-grid button {
+  min-height: 42px;
+  border-color: rgba(232, 202, 128, 0.26);
+  background: linear-gradient(180deg, rgba(246, 234, 212, 0.09), rgba(232, 202, 128, 0.08));
+  color: #f8edd5;
+}
+
+.action-grid button:not(:disabled):hover {
+  border-color: rgba(117, 216, 181, 0.5);
+  background: linear-gradient(180deg, rgba(117, 216, 181, 0.2), rgba(232, 202, 128, 0.1));
+  color: #e5fff5;
+}
+
 .action-grid .all-in {
   background: rgba(217, 109, 114, 0.16);
   color: #ffd5d7;
+}
+
+.action-grid .all-in:not(:disabled):hover {
+  border-color: rgba(217, 109, 114, 0.62);
+  background: rgba(217, 109, 114, 0.24);
+  color: #fff0f0;
 }
 
 .audio-panel {
@@ -1206,9 +1217,17 @@ label {
   padding: 0;
 }
 
+.icon-toggle:not(:disabled):hover {
+  border-color: rgba(117, 216, 181, 0.5);
+  background: rgba(117, 216, 181, 0.14);
+  color: #d9fff0;
+}
+
 .icon-toggle.active {
   background: rgba(117, 216, 181, 0.18);
   color: #c9ffec;
+  border-color: rgba(117, 216, 181, 0.34);
+  box-shadow: inset 0 0 0 1px rgba(117, 216, 181, 0.06), 0 12px 28px rgba(117, 216, 181, 0.12);
 }
 
 .speaker-icon,
@@ -1454,6 +1473,10 @@ label {
   .game-hand-panel .card-view {
     width: 48px;
     height: 66px;
+  }
+
+  .game-hand-panel .court-card-glyph {
+    font-size: 68px;
   }
 
   .game-action-panel {

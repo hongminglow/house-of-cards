@@ -16,6 +16,29 @@ const rankLabels: Record<Card["rank"], string> = {
   A: "A"
 };
 
+const courtGlyphs: Record<Suit, Record<"J" | "Q" | "K", string>> = {
+  spades: {
+    J: "\u{1F0AB}",
+    Q: "\u{1F0AD}",
+    K: "\u{1F0AE}"
+  },
+  hearts: {
+    J: "\u{1F0BB}",
+    Q: "\u{1F0BD}",
+    K: "\u{1F0BE}"
+  },
+  diamonds: {
+    J: "\u{1F0CB}",
+    Q: "\u{1F0CD}",
+    K: "\u{1F0CE}"
+  },
+  clubs: {
+    J: "\u{1F0DB}",
+    Q: "\u{1F0DD}",
+    K: "\u{1F0DE}"
+  }
+};
+
 type PipPosition = {
   x: number;
   y: number;
@@ -103,15 +126,23 @@ export function CardView({ card }: { card: Card }) {
   const red = card.suit === "hearts" || card.suit === "diamonds";
   const label = rankLabels[card.rank];
 
+  if (isCourtRank(card.rank)) {
+    const glyph = courtGlyphs[card.suit][card.rank];
+
+    return (
+      <div className={red ? "card-view court-glyph-card red" : "card-view court-glyph-card"} aria-label={`${label} of ${card.suit}`}>
+        <span className="court-card-glyph" aria-hidden="true">
+          {glyph}
+        </span>
+      </div>
+    );
+  }
+
   return (
     <div className={red ? "card-view red" : "card-view"} aria-label={`${label} of ${card.suit}`}>
       <CardCorner rank={label} suit={card.suit} />
-      <div className={isCourtRank(card.rank) ? "card-center face" : "card-center"}>
-        {isCourtRank(card.rank) ? (
-          <FaceCard rank={card.rank} suit={card.suit} />
-        ) : (
-          <PipLayout rank={card.rank} suit={card.suit} />
-        )}
+      <div className="card-center">
+        <PipLayout rank={card.rank} suit={card.suit} />
       </div>
       <CardCorner rank={label} suit={card.suit} bottom />
     </div>
@@ -149,41 +180,6 @@ function PipLayout({ rank, suit }: { rank: Card["rank"]; suit: Suit }) {
           <SuitMark suit={suit} />
         </span>
       ))}
-    </div>
-  );
-}
-
-function FaceCard({ rank, suit }: { rank: "J" | "Q" | "K"; suit: Suit }) {
-  const crownPoints = rank === "K" ? 5 : rank === "Q" ? 4 : 3;
-
-  return (
-    <div className={`face-card court-${rank.toLowerCase()}`}>
-      <div className="court-half court-top">
-        <div className="court-crown">
-          {Array.from({ length: crownPoints }, (_, index) => (
-            <span key={index} />
-          ))}
-        </div>
-        <div className="court-face" />
-        <div className="court-robe">
-          <SuitMark suit={suit} />
-        </div>
-      </div>
-      <div className="court-band">
-        <SuitMark suit={suit} />
-      </div>
-      <div className="court-half court-bottom">
-        <div className="court-crown">
-          {Array.from({ length: crownPoints }, (_, index) => (
-            <span key={index} />
-          ))}
-        </div>
-        <div className="court-face" />
-        <div className="court-robe">
-          <SuitMark suit={suit} />
-        </div>
-      </div>
-      <strong>{rank}</strong>
     </div>
   );
 }
