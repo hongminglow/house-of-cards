@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type Dispatch, type ReactNode, type SetStateAction } from "react";
+import { useEffect, useMemo, useRef, useState, type Dispatch, type SetStateAction } from "react";
 import { io, type Socket } from "socket.io-client";
 import type {
   AuthPayload,
@@ -34,6 +34,7 @@ export function App() {
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [volume, setVolume] = useState(0.35);
   const [rooms, setRooms] = useState<RoomListItem[]>([]);
+  const [rulesOpen, setRulesOpen] = useState(false);
   const audio = useRef<AudioContext | null>(null);
 
   const room = snapshot?.room ?? null;
@@ -96,26 +97,16 @@ export function App() {
     socket.emit("action", payload);
   }
 
-  const audioPanel = (
-    <AudioPanel
-      soundEnabled={soundEnabled}
-      setSoundEnabled={setSoundEnabled}
-      volume={volume}
-      setVolume={setVolume}
-    />
-  );
-
   if (!player) {
     return (
-      <main className="app-shell login-shell">
-        <section className="table-stage hero-mode" aria-label="House of Cards login">
-          <PokerTableScene room={null} playerSeat={null} />
-          <HeroArt />
-          <BrandTopbar title="Online Poker" status="LOBBY" right="No account" />
-        </section>
-        <aside className="control-dock login-dock" aria-label="Login controls">
+      <main className="login-full-shell" aria-label="House of Cards login">
+        <HeroArt />
+        <div className="login-brand">
+          <BrandLockup title="Online Poker" compact />
+        </div>
+        <section className="login-center">
           <form
-            className="panel"
+            className="panel login-panel"
             onSubmit={(event) => {
               event.preventDefault();
               auth({ email, displayName });
@@ -134,9 +125,8 @@ export function App() {
               Enter lobby
             </button>
           </form>
-          {audioPanel}
           {notice ? <div className="notice">{notice}</div> : null}
-        </aside>
+        </section>
       </main>
     );
   }
@@ -148,17 +138,15 @@ export function App() {
           <BrandLockup title="Lobby" />
           <div className="home-header-actions">
             <BalanceAmount amount={player.accountBalance} />
+            <button className="icon-toggle" onClick={() => setRulesOpen(true)} aria-label="Open poker rules" title="Poker rules">
+              <RulesIcon />
+            </button>
             <IconSoundButton soundEnabled={soundEnabled} setSoundEnabled={setSoundEnabled} />
           </div>
         </header>
 
         <section className="home-grid" aria-label="Poker lobby">
           <div className="lobby-column">
-            <div className="section-heading">
-              <p className="micro-label">Rooms</p>
-              <h1>Choose a table</h1>
-            </div>
-
             <div className="lobby-command-row">
               <button className="primary-button" onClick={createRoom}>
                 Create room
@@ -171,6 +159,11 @@ export function App() {
             <div className="join-row room-code-row">
               <input value={roomCode} onChange={(event) => setRoomCode(event.target.value.toUpperCase())} placeholder="Room no" />
               <button onClick={() => joinRoom(roomCode)}>Join</button>
+            </div>
+
+            <div className="room-list-header">
+              <span>Open rooms</span>
+              <small>{rooms.length} available</small>
             </div>
 
             <div className="room-list" aria-label="Available rooms">
@@ -223,20 +216,47 @@ export function App() {
               </div>
             </div>
 
-            <div className="panel tips-card">
-              <p className="micro-label">Table flow</p>
-              <div className="flow-list">
-                <span>Join or create a room</span>
-                <span>Ready up with 2+ players</span>
-                <span>Play preflop, flop, turn, river</span>
-                <span>Server settles chips</span>
+            <div className="panel promo-card">
+              <p className="micro-label">Featured table</p>
+              <h2>Midnight felt</h2>
+              <div className="promo-row">
+                <span>Buy-in</span>
+                <strong>$100,000</strong>
+              </div>
+              <div className="promo-row">
+                <span>Blinds</span>
+                <strong>$500 / $1,000</strong>
+              </div>
+              <button className="ghost-button compact" onClick={createRoom}>
+                Start a private table
+              </button>
+            </div>
+
+            <div className="panel progress-card">
+              <p className="micro-label">Career pulse</p>
+              <div className="pulse-meter">
+                <span style={{ width: `${Math.min(100, Math.max(8, (player.accountBalance / 1_000_000) * 100))}%` }} />
+              </div>
+              <div className="progress-list">
+                <div>
+                  <span>Bankroll health</span>
+                  <strong>{player.accountBalance >= 1_000_000 ? "Ahead" : player.accountBalance >= 500_000 ? "Stable" : "Rebuild"}</strong>
+                </div>
+                <div>
+                  <span>Preferred seat</span>
+                  <strong>Button</strong>
+                </div>
+                <div>
+                  <span>Next milestone</span>
+                  <strong>$1,250,000</strong>
+                </div>
               </div>
             </div>
 
-            {audioPanel}
             {notice ? <div className="notice">{notice}</div> : null}
           </aside>
         </section>
+        {rulesOpen ? <RulesModal onClose={() => setRulesOpen(false)} /> : null}
       </main>
     );
   }
@@ -301,18 +321,6 @@ function HeroArt() {
   );
 }
 
-function BrandTopbar({ title, status, right }: { title: string; status: string; right: ReactNode }) {
-  return (
-    <div className="table-topbar">
-      <BrandLockup title={title} />
-      <div className="status-cluster">
-        <span>{status}</span>
-        <span>{right}</span>
-      </div>
-    </div>
-  );
-}
-
 function BrandLockup({ title, compact = false }: { title: string; compact?: boolean }) {
   return (
     <div className={compact ? "brand-lockup compact-brand" : "brand-lockup"}>
@@ -323,32 +331,38 @@ function BrandLockup({ title, compact = false }: { title: string; compact?: bool
   );
 }
 
-function AudioPanel({
-  soundEnabled,
-  setSoundEnabled,
-  volume,
-  setVolume
-}: {
-  soundEnabled: boolean;
-  setSoundEnabled: Dispatch<SetStateAction<boolean>>;
-  volume: number;
-  setVolume: Dispatch<SetStateAction<number>>;
-}) {
+function RulesModal({ onClose }: { onClose: () => void }) {
   return (
-    <div className="panel audio-panel">
-      <div className="switch-line">
-        <span>SFX</span>
-        <IconSoundButton soundEnabled={soundEnabled} setSoundEnabled={setSoundEnabled} />
+    <div className="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="rules-title">
+      <div className="rules-modal">
+        <div className="modal-heading">
+          <div>
+            <p className="micro-label">Texas Hold'em</p>
+            <h2 id="rules-title">Poker rules</h2>
+          </div>
+          <button className="icon-toggle" onClick={onClose} aria-label="Close rules" title="Close rules">
+            <CloseIcon />
+          </button>
+        </div>
+        <div className="rules-grid">
+          <div>
+            <strong>1. Hole cards</strong>
+            <span>Each player gets two private cards. Only you can see yours.</span>
+          </div>
+          <div>
+            <strong>2. Community board</strong>
+            <span>The table reveals flop, turn, and river for everyone to use.</span>
+          </div>
+          <div>
+            <strong>3. Betting</strong>
+            <span>Fold, check, call, bet, raise, or go all-in when it is your turn.</span>
+          </div>
+          <div>
+            <strong>4. Showdown</strong>
+            <span>The best five-card hand wins. Split pots are handled by the server.</span>
+          </div>
+        </div>
       </div>
-      <input
-        aria-label="SFX volume"
-        type="range"
-        min="0"
-        max="1"
-        step="0.05"
-        value={volume}
-        onChange={(event) => setVolume(Number(event.target.value))}
-      />
     </div>
   );
 }
@@ -405,6 +419,23 @@ function SpeakerIcon({ muted }: { muted: boolean }) {
           <path d="M18.8 6.8a7.4 7.4 0 0 1 0 10.4" />
         </>
       )}
+    </svg>
+  );
+}
+
+function RulesIcon() {
+  return (
+    <svg className="speaker-icon" viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M7 5.5h10a2 2 0 0 1 2 2v11H7a2 2 0 0 1-2-2v-9a2 2 0 0 1 2-2Z" />
+      <path d="M8.5 9h7M8.5 12h7M8.5 15h4" />
+    </svg>
+  );
+}
+
+function CloseIcon() {
+  return (
+    <svg className="speaker-icon" viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M6 6l12 12M18 6L6 18" />
     </svg>
   );
 }

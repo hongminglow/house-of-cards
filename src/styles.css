@@ -75,10 +75,45 @@ input {
 }
 
 .home-shell {
-  display: grid;
-  grid-template-rows: auto minmax(0, 1fr);
+  display: block;
+  height: 100vh;
   padding: 22px;
+  overflow-y: auto;
+}
+
+.login-full-shell {
+  position: relative;
+  display: grid;
+  min-height: 100vh;
   overflow: hidden;
+  background: #07110f;
+}
+
+.login-full-shell .hero-art::after {
+  background:
+    radial-gradient(circle at 50% 52%, rgba(7, 17, 15, 0.06), rgba(7, 17, 15, 0.42) 46%, rgba(7, 17, 15, 0.84) 100%),
+    linear-gradient(90deg, rgba(7, 17, 15, 0.78) 0%, rgba(7, 17, 15, 0.1) 42%, rgba(7, 17, 15, 0.54) 100%);
+}
+
+.login-brand {
+  position: absolute;
+  z-index: 2;
+  left: 28px;
+  top: 24px;
+}
+
+.login-center {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  min-height: 100vh;
+  padding: 96px 22px 36px;
+}
+
+.login-panel {
+  width: min(390px, calc(100vw - 36px));
+  background: rgba(7, 17, 15, 0.72);
 }
 
 .home-header {
@@ -110,7 +145,6 @@ input {
   display: grid;
   grid-template-columns: minmax(420px, 1.1fr) minmax(330px, 0.72fr);
   gap: 22px;
-  min-height: 0;
 }
 
 .lobby-column,
@@ -133,11 +167,7 @@ input {
   display: grid;
   grid-auto-rows: max-content;
   gap: 14px;
-  overflow-y: auto;
-}
-
-.section-heading h1 {
-  font-size: clamp(34px, 5vw, 66px);
+  overflow: visible;
 }
 
 .lobby-command-row {
@@ -156,11 +186,28 @@ input {
   margin-top: 0;
 }
 
+.room-list-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: #f8edd5;
+  font-size: 13px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.room-list-header small {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: none;
+}
+
 .room-list {
   display: grid;
   align-content: start;
   gap: 10px;
-  overflow-y: auto;
+  overflow: visible;
   padding-right: 4px;
 }
 
@@ -183,9 +230,11 @@ input {
 
 .room-row small,
 .empty-rooms span,
-.flow-list span,
 .summary-stat span,
-.game-room-panel small {
+.game-room-panel small,
+.promo-row span,
+.progress-list span,
+.rules-grid span {
   color: var(--muted);
   font-size: 12px;
   line-height: 1.25;
@@ -242,32 +291,94 @@ input {
   font-size: 18px;
 }
 
-.flow-list {
+.promo-card {
+  overflow: hidden;
+  background:
+    linear-gradient(135deg, rgba(232, 202, 128, 0.1), transparent 38%),
+    var(--surface);
+}
+
+.promo-card h2 {
+  margin-bottom: 14px;
+  font-size: 28px;
+}
+
+.promo-row,
+.progress-list div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  border-top: 1px solid rgba(232, 202, 128, 0.12);
+  padding: 11px 0;
+}
+
+.promo-row strong,
+.progress-list strong {
+  color: #f8edd5;
+}
+
+.pulse-meter {
+  height: 10px;
+  margin: 14px 0;
+  overflow: hidden;
+  border: 1px solid rgba(232, 202, 128, 0.16);
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.pulse-meter span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #bf3342, #e8ca80, #75d8b5);
+}
+
+.progress-list {
   display: grid;
-  gap: 10px;
-  counter-reset: flow;
 }
 
-.flow-list span {
-  position: relative;
-  padding-left: 32px;
-}
-
-.flow-list span::before {
-  position: absolute;
-  left: 0;
-  top: -2px;
+.modal-backdrop {
+  position: fixed;
+  z-index: 20;
+  inset: 0;
   display: grid;
   place-items: center;
-  width: 22px;
-  height: 22px;
-  counter-increment: flow;
-  content: counter(flow);
-  border: 1px solid rgba(232, 202, 128, 0.32);
-  border-radius: 999px;
-  color: var(--accent);
-  font-size: 11px;
-  font-weight: 800;
+  padding: 20px;
+  background: rgba(0, 0, 0, 0.56);
+  backdrop-filter: blur(10px);
+}
+
+.rules-modal {
+  width: min(620px, 100%);
+  border: 1px solid rgba(232, 202, 128, 0.26);
+  border-radius: 12px;
+  background: rgba(8, 19, 16, 0.94);
+  box-shadow: 0 28px 80px rgba(0, 0, 0, 0.46);
+  padding: 20px;
+}
+
+.modal-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.rules-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.rules-grid div {
+  display: grid;
+  gap: 8px;
+  border: 1px solid rgba(232, 202, 128, 0.14);
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.18);
+  padding: 14px;
 }
 
 .game-shell {
