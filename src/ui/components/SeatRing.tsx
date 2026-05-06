@@ -31,7 +31,17 @@ export function SeatRing({ room, localUserId }: Props) {
             {seat.isDealer ? "D " : ""}
             {seat.isSmallBlind ? "SB " : ""}
             {seat.isBigBlind ? "BB " : ""}
-            {seat.currentBet ? `Bet ${seat.currentBet.toLocaleString()}` : seat.isAllIn ? "All in" : seat.hasCards ? "In hand" : "Waiting"}
+            {seat.currentBet
+              ? `Bet ${seat.currentBet.toLocaleString()}`
+              : seat.isAllIn
+                ? "All in"
+                : seat.hasCards
+                  ? "In hand"
+                  : !seat.isConnected
+                    ? "Away"
+                    : seat.isReady
+                      ? "In game"
+                      : "Waiting"}
           </div>
         </div>
       ))}

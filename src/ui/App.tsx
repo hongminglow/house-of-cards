@@ -315,8 +315,8 @@ export function App() {
         <div className="game-action-panel edge-panel">
           <ActionBar legalActions={player.legalActions} onAction={act} />
           <div className="game-button-row">
-            <button className="ghost-button compact" onClick={() => socket.emit("ready")}>
-              Ready
+            <button className="ghost-button compact" onClick={() => socket.emit("ready")} disabled={player.isReady}>
+              {player.isReady ? "In game" : "Ready"}
             </button>
             <button className="danger-button compact" onClick={() => socket.emit("leaveRoom")}>
               Leave

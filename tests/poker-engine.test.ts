@@ -95,4 +95,46 @@ describe("poker room", () => {
     expect(room.publicState().street).toBe("settled");
     expect(room.publicState().winners).toHaveLength(1);
   });
+
+  it("keeps ready players in the game and starts the next hand without another ready click", () => {
+    const room = new PokerRoom("TEST04");
+    room.join(user(1));
+    room.join(user(2));
+    room.ready("u1");
+    room.ready("u2");
+
+    const firstHand = room.publicState().handNumber;
+    const turnUser = room.publicState().seats.find((seat) => seat.seatIndex === room.publicState().currentTurnSeat)!.userId;
+    room.act(turnUser, { type: "fold" });
+
+    expect(room.publicState().street).toBe("settled");
+    expect(room.snapshotFor("u1").player.isReady).toBe(true);
+    expect(room.snapshotFor("u2").player.isReady).toBe(true);
+
+    const event = room.continueIfReady();
+
+    expect(event.type).toBe("sfx");
+    expect(room.publicState().street).toBe("preflop");
+    expect(room.publicState().handNumber).toBe(firstHand + 1);
+  });
+
+  it("folds a timed-out player and releases their seat after the hand", () => {
+    const room = new PokerRoom("TEST05");
+    room.join(user(1));
+    room.join(user(2));
+    room.ready("u1");
+    room.ready("u2");
+
+    const timedOutUser = room.publicState().seats.find((seat) => seat.seatIndex === room.publicState().currentTurnSeat)!.userId;
+    const event = room.timeoutCurrentTurn();
+
+    expect(event.type).toBe("settled");
+    expect(room.snapshotFor(timedOutUser).player.isReady).toBe(false);
+
+    const returnedStacks = room.releaseTimedOutSeats();
+
+    expect(returnedStacks).toHaveLength(1);
+    expect(returnedStacks[0].userId).toBe(timedOutUser);
+    expect(room.publicState().seats.some((seat) => seat.userId === timedOutUser)).toBe(false);
+  });
 });

@@ -22,6 +22,7 @@ export type SeatPublic = {
   isSmallBlind: boolean;
   isBigBlind: boolean;
   isConnected: boolean;
+  isReady: boolean;
 };
 
 export type LegalAction = {
@@ -56,6 +57,7 @@ export type PlayerPrivateState = {
   accountBalance: number;
   roomCode?: string;
   seatIndex?: number;
+  isReady?: boolean;
   holeCards: Card[];
   legalActions: LegalAction[];
 };

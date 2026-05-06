@@ -148,7 +148,7 @@ setInterval(async () => {
   for (const room of rooms.values()) {
     const state = room.publicState();
     if (state.actionDeadlineAt && state.actionDeadlineAt < Date.now()) {
-      const event = room.autoAct();
+      const event = room.timeoutCurrentTurn();
       await handleEvent(room, event);
       emitRoom(room);
     }
@@ -220,7 +220,48 @@ async function handleEvent(room: PokerRoom, event: RoomEvent): Promise<void> {
     setTimeout(() => {
       emitRoom(room);
     }, 250);
+    setTimeout(() => {
+      void continueRoomFlow(room);
+    }, 2_400);
   }
+}
+
+async function continueRoomFlow(room: PokerRoom): Promise<void> {
+  if (rooms.get(room.code) !== room) return;
+
+  await releaseTimedOutSeats(room);
+  if (room.isEmpty()) {
+    rooms.delete(room.code);
+    return;
+  }
+
+  const event = room.continueIfReady();
+  await handleEvent(room, event);
+  emitRoom(room);
+}
+
+async function releaseTimedOutSeats(room: PokerRoom): Promise<void> {
+  const returnedStacks = room.releaseTimedOutSeats();
+  if (returnedStacks.length === 0) return;
+
+  for (const returned of returnedStacks) {
+    const updatedUser = await store.adjustBalance(returned.userId, returned.delta);
+    await presence.removeRoomUser(room.code, returned.userId).catch(() => undefined);
+
+    io.sockets.sockets.forEach((socket) => {
+      if (socket.data.user?.id !== returned.userId) return;
+      socket.data.user = updatedUser;
+      if (socket.data.roomCode === room.code) {
+        socket.data.roomCode = undefined;
+        socket.leave(room.code);
+        socket.emit("snapshot", emptySnapshot(updatedUser));
+      } else if (!socket.data.roomCode) {
+        socket.emit("snapshot", emptySnapshot(updatedUser));
+      }
+    });
+  }
+
+  io.to(room.code).emit("sfx", "leave");
 }
 
 function emitRoom(room: PokerRoom): void {

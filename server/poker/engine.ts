@@ -40,6 +40,7 @@ type SeatState = {
   isReady: boolean;
   isConnected: boolean;
   actedThisStreet: boolean;
+  leaveAfterHand: boolean;
 };
 
 export type SettlementDelta = {
@@ -90,6 +91,7 @@ export class PokerRoom {
     const existing = this.findSeatByUser(user.id);
     if (existing) {
       existing.isConnected = true;
+      existing.leaveAfterHand = false;
       return existing;
     }
 
@@ -116,7 +118,8 @@ export class PokerRoom {
       isAllIn: false,
       isReady: false,
       isConnected: true,
-      actedThisStreet: false
+      actedThisStreet: false,
+      leaveAfterHand: false
     };
     this.seats.set(openSeat, seat);
     this.lastAction = `${seat.displayName} joined the table`;
@@ -129,7 +132,9 @@ export class PokerRoom {
 
     if (this.street !== "waiting" && this.street !== "settled") {
       seat.isConnected = false;
-      this.lastAction = `${seat.displayName} disconnected`;
+      seat.isReady = false;
+      seat.leaveAfterHand = true;
+      this.lastAction = `${seat.displayName} will leave after this hand`;
       return null;
     }
 
@@ -154,10 +159,9 @@ export class PokerRoom {
   ready(userId: string): RoomEvent {
     const seat = this.requireSeat(userId);
     seat.isReady = true;
-    this.lastAction = `${seat.displayName} is ready`;
+    this.lastAction = `${seat.displayName} joined the game`;
 
-    const readySeats = this.activeSeats().filter((candidate) => candidate.isReady);
-    if (this.street === "waiting" && readySeats.length >= 2) {
+    if ((this.street === "waiting" || this.street === "settled") && this.readySeats().length >= 2) {
       return this.startHand();
     }
     return { type: "none" };
@@ -241,8 +245,51 @@ export class PokerRoom {
     if (this.currentTurnSeat === null) return { type: "none" };
     const seat = this.seats.get(this.currentTurnSeat);
     if (!seat) return { type: "none" };
-    const callAmount = Math.max(0, this.currentBet - seat.currentBet);
-    return this.act(seat.userId, callAmount === 0 ? { type: "check" } : { type: "fold" });
+    return this.act(seat.userId, { type: "fold" });
+  }
+
+  timeoutCurrentTurn(): RoomEvent {
+    if (this.currentTurnSeat === null) return { type: "none" };
+    const seat = this.seats.get(this.currentTurnSeat);
+    if (!seat) return { type: "none" };
+    seat.isReady = false;
+    seat.isConnected = false;
+    seat.leaveAfterHand = true;
+    const event = this.autoAct();
+    if (event.type !== "settled") {
+      this.lastAction = `${seat.displayName} timed out and left the seat`;
+    }
+    return event;
+  }
+
+  continueIfReady(): RoomEvent {
+    if (this.street !== "waiting" && this.street !== "settled") return { type: "none" };
+    if (this.readySeats().length < 2) {
+      this.street = "waiting";
+      this.lastAction = "Waiting for at least two players in the game";
+      return { type: "none" };
+    }
+    return this.startHand();
+  }
+
+  releaseTimedOutSeats(): SettlementDelta[] {
+    if (this.street !== "waiting" && this.street !== "settled") return [];
+    const leaving = this.activeSeats().filter((seat) => seat.leaveAfterHand);
+    if (leaving.length === 0) return [];
+
+    const deltas = leaving.map((seat) => {
+      this.seats.delete(seat.seatIndex);
+      const delta = seat.stack;
+      seat.accountBalance += delta;
+      return {
+        userId: seat.userId,
+        delta,
+        resultingStack: 0
+      };
+    });
+
+    this.lastAction = `${leaving.map((seat) => seat.displayName).join(", ")} left the table`;
+    return deltas;
   }
 
   snapshotFor(userId: string): GameSnapshot {
@@ -255,6 +302,7 @@ export class PokerRoom {
           accountBalance: seat.accountBalance,
           roomCode: this.code,
           seatIndex: seat.seatIndex,
+          isReady: seat.isReady,
           holeCards: seat.holeCards,
           legalActions: this.currentTurnSeat === seat.seatIndex ? this.legalActionsFor(seat) : []
         }
@@ -303,7 +351,7 @@ export class PokerRoom {
   }
 
   private startHand(): RoomEvent {
-    const participants = this.activeSeats().filter((seat) => seat.stack > 0);
+    const participants = this.readySeats();
     if (participants.length < 2) {
       this.street = "waiting";
       this.lastAction = "Waiting for at least two players";
@@ -445,7 +493,6 @@ export class PokerRoom {
     };
 
     this.activeSeats().forEach((seat) => {
-      seat.isReady = false;
       seat.currentBet = 0;
       seat.committed = 0;
       seat.actedThisStreet = false;
@@ -501,12 +548,16 @@ export class PokerRoom {
     return [...this.seats.values()].sort((a, b) => a.seatIndex - b.seatIndex);
   }
 
+  private readySeats(): SeatState[] {
+    return this.activeSeats().filter((seat) => seat.isReady && seat.isConnected && seat.stack > 0 && !seat.leaveAfterHand);
+  }
+
   private contenders(): SeatState[] {
     return this.activeSeats().filter((seat) => seat.holeCards.length > 0 && !seat.hasFolded);
   }
 
   private nextOccupiedSeat(afterSeat: number | null): number {
-    const occupied = this.activeSeats().filter((seat) => seat.stack > 0);
+    const occupied = this.readySeats();
     if (occupied.length === 0) throw new Error("No occupied seats.");
     const sorted = occupied.map((seat) => seat.seatIndex);
     const current = afterSeat ?? -1;
@@ -548,7 +599,8 @@ export class PokerRoom {
       isDealer: seat.seatIndex === this.dealerSeat,
       isSmallBlind: seat.seatIndex === this.smallBlindSeat,
       isBigBlind: seat.seatIndex === this.bigBlindSeat,
-      isConnected: seat.isConnected
+      isConnected: seat.isConnected,
+      isReady: seat.isReady
     };
   }
 
