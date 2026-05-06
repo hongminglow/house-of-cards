@@ -153,4 +153,21 @@ describe("poker room", () => {
     expect(room.publicState().seats.some((seat) => seat.userId === leavingUser)).toBe(false);
     expect(room.publicState().street).toBe("settled");
   });
+
+  it("records hand history without revealing winner cards on an uncontested fold", () => {
+    const room = new PokerRoom("TEST07");
+    room.join(user(1));
+    room.join(user(2));
+    room.ready("u1");
+    room.ready("u2");
+
+    const turnUser = room.publicState().seats.find((seat) => seat.seatIndex === room.publicState().currentTurnSeat)!.userId;
+    room.act(turnUser, { type: "fold" });
+
+    const [entry] = room.publicState().history;
+    expect(entry.showdown).toBe(false);
+    expect(entry.winners[0].holeCards).toBeUndefined();
+    expect(entry.participants).toHaveLength(2);
+    expect(entry.participants.reduce((total, participant) => total + participant.delta, 0)).toBe(0);
+  });
 });

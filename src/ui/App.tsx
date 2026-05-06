@@ -7,7 +7,8 @@ import type {
   PokerActionPayload,
   ServerToClientEvents,
   SfxName,
-  Card
+  Card,
+  HandHistoryEntry
 } from "../../shared/types";
 import { PokerTableScene } from "./PokerTableScene";
 import { ActionBar } from "./components/ActionBar";
@@ -38,6 +39,7 @@ export function App() {
   const [volume, setVolume] = useState(0.35);
   const [rooms, setRooms] = useState<RoomListItem[]>([]);
   const [rulesOpen, setRulesOpen] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
   const [gameSceneReady, setGameSceneReady] = useState(false);
   const audio = useRef<AudioContext | null>(null);
   const soundSettings = useRef({ enabled: soundEnabled, volume });
@@ -162,6 +164,9 @@ export function App() {
             <BalanceAmount amount={player.accountBalance} />
             <button className="icon-toggle rules-button" onClick={() => setRulesOpen(true)} aria-label="Open poker rules" title="Poker rules">
               <RulesIcon />
+            </button>
+            <button className="icon-toggle history-button" onClick={() => setHistoryOpen(true)} aria-label="Open game history" title="Game history">
+              <HistoryIcon />
             </button>
             <IconSoundButton soundEnabled={soundEnabled} setSoundEnabled={setSoundEnabled} />
           </div>
@@ -341,6 +346,7 @@ export function App() {
         {notice ? <div className="notice game-notice">{notice}</div> : null}
         {!gameSceneReady ? <GameLoadingOverlay /> : null}
         {rulesOpen ? <RulesModal onClose={() => setRulesOpen(false)} /> : null}
+        {historyOpen ? <HistoryModal entries={room.history} playerUserId={player.userId} onClose={() => setHistoryOpen(false)} /> : null}
       </section>
     </main>
   );
@@ -546,6 +552,90 @@ function RulesModal({ onClose }: { onClose: () => void }) {
   );
 }
 
+function HistoryModal({
+  entries,
+  playerUserId,
+  onClose
+}: {
+  entries: HandHistoryEntry[];
+  playerUserId: string;
+  onClose: () => void;
+}) {
+  return (
+    <div className="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="history-title">
+      <div className="rules-modal history-modal">
+        <div className="modal-heading">
+          <div>
+            <p className="micro-label">Table log</p>
+            <h2 id="history-title">Game history</h2>
+          </div>
+          <button className="icon-toggle" onClick={onClose} aria-label="Close history" title="Close history">
+            <CloseIcon />
+          </button>
+        </div>
+        <div className="history-content">
+          {entries.length ? (
+            entries.map((entry) => <HistoryEntryRow entry={entry} key={entry.handNumber} playerUserId={playerUserId} />)
+          ) : (
+            <div className="empty-history">
+              <strong>No completed hands yet</strong>
+              <span>Finished rounds will appear here with winners, revealed cards, and your result.</span>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function HistoryEntryRow({ entry, playerUserId }: { entry: HandHistoryEntry; playerUserId: string }) {
+  const playerResult = entry.participants.find((participant) => participant.userId === playerUserId);
+  const resultClassName = playerResult ? (playerResult.delta >= 0 ? "history-result positive" : "history-result negative") : "history-result";
+
+  return (
+    <article className="history-row">
+      <div className="history-row-heading">
+        <div>
+          <strong>Hand {entry.handNumber}</strong>
+          <small>{entry.showdown ? "Showdown" : "Won without card reveal"}</small>
+        </div>
+        <span className={resultClassName}>{playerResult ? formatSignedCurrency(playerResult.delta) : "Sat out"}</span>
+      </div>
+
+      <div className="history-winners">
+        {entry.winners.map((winner) => (
+          <div className="history-winner" key={`${entry.handNumber}-${winner.userId}`}>
+            <div>
+              <strong>{winner.displayName}</strong>
+              <span>
+                ${winner.amount.toLocaleString()}
+                {winner.handName ? ` · ${winner.handName}` : ""}
+              </span>
+            </div>
+            {winner.holeCards?.length ? (
+              <div className="history-card-pair" aria-label={`${winner.displayName} winning cards`}>
+                {winner.holeCards.map((card) => (
+                  <CardView card={card} key={`${winner.userId}-${card.rank}-${card.suit}`} />
+                ))}
+              </div>
+            ) : (
+              <small>No cards shown</small>
+            )}
+          </div>
+        ))}
+      </div>
+
+      {entry.communityCards.length ? (
+        <div className="history-board" aria-label="Community cards">
+          {entry.communityCards.map((card, index) => (
+            <CardView card={card} key={`${entry.handNumber}-board-${index}-${card.rank}-${card.suit}`} />
+          ))}
+        </div>
+      ) : null}
+    </article>
+  );
+}
+
 function IconSoundButton({
   soundEnabled,
   setSoundEnabled
@@ -613,6 +703,17 @@ function RulesIcon() {
   );
 }
 
+function HistoryIcon() {
+  return (
+    <svg className="history-icon" viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M6.8 5.4h10.4a1.8 1.8 0 0 1 1.8 1.8v11.1H5V7.2a1.8 1.8 0 0 1 1.8-1.8Z" />
+      <path d="M8.4 9h7.2M8.4 12h7.2M8.4 15h4.4" />
+      <path d="M5 18.3h14" />
+      <path d="M8 3.7h8" />
+    </svg>
+  );
+}
+
 function CloseIcon() {
   return (
     <svg className="speaker-icon" viewBox="0 0 24 24" aria-hidden="true">
@@ -630,11 +731,21 @@ function playSfx(name: SfxName, volume: number, ref: React.MutableRefObject<Audi
   const AudioContextClass = window.AudioContext || window.webkitAudioContext;
   ref.current ??= new AudioContextClass();
   const ctx = ref.current;
+  if (name === "card") {
+    playNoiseHit(ctx, volume, 0.07, 900, 0.12);
+    return;
+  }
+  if (name === "chips-fly") {
+    playChipFly(ctx, volume);
+    return;
+  }
   const osc = ctx.createOscillator();
   const gain = ctx.createGain();
   const map: Record<SfxName, [number, number]> = {
     deal: [520, 0.08],
+    card: [520, 0.08],
     chip: [280, 0.1],
+    "chips-fly": [520, 0.2],
     check: [360, 0.07],
     fold: [160, 0.12],
     "all-in": [740, 0.2],
@@ -652,6 +763,47 @@ function playSfx(name: SfxName, volume: number, ref: React.MutableRefObject<Audi
   osc.start();
   gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + duration);
   osc.stop(ctx.currentTime + duration);
+}
+
+function playNoiseHit(ctx: AudioContext, volume: number, duration: number, filterFrequency: number, gainScale = 0.12) {
+  const sampleCount = Math.max(1, Math.floor(ctx.sampleRate * duration));
+  const buffer = ctx.createBuffer(1, sampleCount, ctx.sampleRate);
+  const data = buffer.getChannelData(0);
+  for (let index = 0; index < sampleCount; index += 1) {
+    const decay = 1 - index / sampleCount;
+    data[index] = (Math.random() * 2 - 1) * decay * decay;
+  }
+
+  const source = ctx.createBufferSource();
+  const filter = ctx.createBiquadFilter();
+  const gain = ctx.createGain();
+  filter.type = "bandpass";
+  filter.frequency.value = filterFrequency;
+  filter.Q.value = 3.2;
+  gain.gain.value = volume * gainScale;
+  source.buffer = buffer;
+  source.connect(filter);
+  filter.connect(gain);
+  gain.connect(ctx.destination);
+  source.start();
+}
+
+function playChipFly(ctx: AudioContext, volume: number) {
+  [520, 690, 820].forEach((frequency, index) => {
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    const start = ctx.currentTime + index * 0.045;
+    osc.type = "triangle";
+    osc.frequency.setValueAtTime(frequency, start);
+    osc.frequency.exponentialRampToValueAtTime(frequency * 1.55, start + 0.16);
+    gain.gain.setValueAtTime(volume * 0.045, start);
+    gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.18);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start(start);
+    osc.stop(start + 0.2);
+  });
+  playNoiseHit(ctx, volume, 0.18, 2800, 0.08);
 }
 
 declare global {

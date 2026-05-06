@@ -59,7 +59,7 @@ export type HandRecord = {
 
 export type RoomEvent =
   | { type: "none" }
-  | { type: "sfx"; name: "deal" | "chip" | "check" | "fold" | "all-in" | "winner" }
+  | { type: "sfx"; name: "deal" | "card" | "chip" | "chips-fly" | "check" | "fold" | "all-in" | "winner" }
   | { type: "settled"; record: HandRecord };
 
 export type LeaveResult = {
@@ -87,6 +87,7 @@ export class PokerRoom {
   private lastAction = "Waiting for players";
   private winners: RoomPublicState["winners"] = [];
   private actionDeadlineAt: number | null = null;
+  private history: RoomPublicState["history"] = [];
 
   constructor(code: string) {
     this.code = code;
@@ -367,7 +368,8 @@ export class PokerRoom {
       currentTurnSeat: this.currentTurnSeat,
       lastAction: this.lastAction,
       winners: this.winners,
-      actionDeadlineAt: this.actionDeadlineAt
+      actionDeadlineAt: this.actionDeadlineAt,
+      history: this.history
     };
   }
 
@@ -411,7 +413,7 @@ export class PokerRoom {
     this.currentTurnSeat = this.nextActionableSeat(this.bigBlindSeat);
     this.armTimer();
     this.lastAction = `Hand ${this.handNumber} started`;
-    return { type: "sfx", name: "deal" };
+    return { type: "sfx", name: "card" };
   }
 
   private progressAfterAction(): RoomEvent | null {
@@ -457,7 +459,7 @@ export class PokerRoom {
     this.currentTurnSeat = this.nextActionableSeat(this.dealerSeat);
     this.armTimer();
     this.lastAction = `${this.street.toUpperCase()} dealt`;
-    return { type: "sfx", name: "deal" };
+    return { type: "sfx", name: "card" };
   }
 
   private showdown(): RoomEvent {
@@ -489,11 +491,12 @@ export class PokerRoom {
         seat: this.requireSeat(userId),
         amount: payout.amount,
         handName: payout.handName
-      }))
+      })),
+      true
     );
   }
 
-  private settle(results: Array<{ seat: SeatState; amount: number; handName?: string }>): RoomEvent {
+  private settle(results: Array<{ seat: SeatState; amount: number; handName?: string }>, showdown = false): RoomEvent {
     results.forEach(({ seat, amount }) => {
       seat.stack += amount;
     });
@@ -508,17 +511,38 @@ export class PokerRoom {
     this.street = "settled";
     this.currentTurnSeat = null;
     this.actionDeadlineAt = null;
+    const settlements = this.settlementDeltas(results);
+    this.history = [
+      {
+        handNumber: this.handNumber,
+        endedAt: Date.now(),
+        communityCards: [...this.communityCards],
+        showdown,
+        winners: results.map(({ seat, amount, handName }) => ({
+          userId: seat.userId,
+          displayName: seat.displayName,
+          amount,
+          handName,
+          ...(showdown ? { holeCards: [...seat.holeCards] } : {})
+        })),
+        participants: settlements.map((settlement) => {
+          const seat = this.requireSeat(settlement.userId);
+          return {
+            userId: seat.userId,
+            displayName: seat.displayName,
+            delta: settlement.delta
+          };
+        })
+      },
+      ...this.history
+    ].slice(0, 20);
 
     const record: HandRecord = {
       roomCode: this.code,
       handNumber: this.handNumber,
       communityCards: this.communityCards,
       snapshot: this.publicState(),
-      settlements: results.map(({ seat, amount }) => ({
-        userId: seat.userId,
-        delta: amount - seat.committed,
-        resultingStack: seat.stack
-      }))
+      settlements
     };
 
     this.activeSeats().forEach((seat) => {
@@ -531,6 +555,17 @@ export class PokerRoom {
     });
 
     return { type: "settled", record };
+  }
+
+  private settlementDeltas(results: Array<{ seat: SeatState; amount: number; handName?: string }>): SettlementDelta[] {
+    const payoutByUser = new Map(results.map(({ seat, amount }) => [seat.userId, amount]));
+    return this.activeSeats()
+      .filter((seat) => seat.holeCards.length > 0 || seat.committed > 0)
+      .map((seat) => ({
+        userId: seat.userId,
+        delta: (payoutByUser.get(seat.userId) ?? 0) - seat.committed,
+        resultingStack: seat.stack
+      }));
   }
 
   private legalActionsFor(seat: SeatState): LegalAction[] {

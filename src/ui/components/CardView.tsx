@@ -1,3 +1,4 @@
+import { useState } from "react";
 import type { Card, Rank, Suit } from "../../../shared/types";
 
 const rankLabels: Record<Rank, string> = {
@@ -102,6 +103,23 @@ const pipLayouts: Partial<Record<Rank, PipPosition[]>> = {
 export function CardView({ card }: { card: Card }) {
   const red = card.suit === "hearts" || card.suit === "diamonds";
   const label = rankLabels[card.rank];
+  const [courtImageFailed, setCourtImageFailed] = useState(false);
+
+  if (isCourtRank(card.rank) && !courtImageFailed) {
+    return (
+      <div className={red ? "card-view court-image-card red" : "card-view court-image-card"} aria-label={`${label} of ${card.suit}`}>
+        <img
+          alt=""
+          className="court-card-image"
+          decoding="async"
+          draggable={false}
+          onError={() => setCourtImageFailed(true)}
+          referrerPolicy="no-referrer"
+          src={courtCardUrl(card.rank, card.suit)}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className={red ? "card-view red" : "card-view"} aria-label={`${label} of ${card.suit}`}>
@@ -114,6 +132,11 @@ export function CardView({ card }: { card: Card }) {
       </svg>
     </div>
   );
+}
+
+function courtCardUrl(rank: "J" | "Q" | "K", suit: Suit) {
+  const rankName = rank === "J" ? "jack" : rank === "Q" ? "queen" : "king";
+  return `https://commons.wikimedia.org/wiki/Special:Redirect/file/English_pattern_${rankName}_of_${suit}.svg`;
 }
 
 function PipFace({ rank, suit }: { rank: Rank; suit: Suit }) {

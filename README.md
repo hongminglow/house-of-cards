@@ -13,7 +13,8 @@ The product goal is a casino-style poker room with a polished game HUD, readable
 - No-limit Texas Hold'em flow with opening forced bets, preflop, flop, turn, river, showdown, side pots, split pots, and settlement.
 - Private hole cards per socket; other players only expose public card presence.
 - Poker rules modal available in the lobby and game room, including hand rankings and regular playing-card samples.
-- SFX for deal, chip, check, fold, all-in, winner, join, leave, and warning events, with speaker/mute icon controls.
+- Game-room history modal with completed hand results, local +/- table result, and winner cards only when the hand reaches showdown.
+- SFX for card placement, chip movement, check, fold, all-in, winner, join, leave, and warning events, with speaker/mute icon controls.
 - Randomized croupier GLB assets loaded from `public/assets/croupiers`.
 - Croupier cursor tracking within a front-facing clamp, with a stronger custom response profile for `croupier-serena.glb`.
 - Wider dealer table cutout so croupier models sit behind the table with better clearance.
@@ -29,7 +30,7 @@ The product goal is a casino-style poker room with a polished game HUD, readable
 5. The player presses `Ready` once after entering the room. After that, they are considered in the game until they leave, disconnect, run out of table stack, or time out.
 6. A hand starts when at least 2 connected seated players are in the game.
 7. The server posts the opening forced bets, shuffles and deals hole cards, chooses turn order, and sends each player a private snapshot.
-8. On each turn, the player can fold, check, call, bet, raise, or go all-in depending on the server-validated legal action set.
+8. On each turn, the player can fold, check, call, bet, raise, or go all-in depending on the server-validated legal action set. The countdown timer only runs in the local action panel when it is that player's turn.
 9. Each turn has a timer. If the player does not act before timeout, the server folds them, marks them out of the game, and releases their seat after the hand settles.
 10. The hand progresses through preflop, flop, turn, river, and showdown, or ends early when only one contender remains.
 11. Settlement is calculated server-side, table stacks update immediately, hand history is saved, and the winner reveal plays.

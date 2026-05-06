@@ -218,6 +218,7 @@ async function handleEvent(room: PokerRoom, event: RoomEvent): Promise<void> {
       console.error("Failed to save hand", error);
     });
     io.to(room.code).emit("sfx", "winner");
+    io.to(room.code).emit("sfx", "chips-fly");
     setTimeout(() => {
       emitRoom(room);
     }, 250);

@@ -16,33 +16,34 @@ export function ActionBar({ legalActions, actionDeadlineAt, currentTurnName, isL
   const wager = byType.get("bet") ?? byType.get("raise") ?? byType.get("all-in");
   const min = wager?.minAmount ?? 0;
   const max = wager?.maxAmount ?? 0;
-  const remainingMs = actionDeadlineAt ? Math.max(0, actionDeadlineAt - now) : 0;
+  const activeDeadline = isLocalTurn ? actionDeadlineAt : null;
+  const remainingMs = activeDeadline ? Math.max(0, activeDeadline - now) : 0;
   const remainingSeconds = Math.ceil(remainingMs / 1000);
-  const timerProgress = actionDeadlineAt ? Math.max(0, Math.min(1, remainingMs / TURN_ACTION_MS)) : 0;
+  const timerProgress = activeDeadline ? Math.max(0, Math.min(1, remainingMs / TURN_ACTION_MS)) : 0;
   const timerLabel = isLocalTurn ? "Your turn" : currentTurnName ? `${currentTurnName}'s turn` : "Waiting for action";
   const timerClassName = [
     "turn-timer",
     isLocalTurn ? "active" : "",
     remainingMs > 0 && remainingMs <= 5_000 ? "urgent" : "",
-    !actionDeadlineAt ? "idle" : ""
+    !activeDeadline ? "idle" : ""
   ]
     .filter(Boolean)
     .join(" ");
 
   useEffect(() => {
-    if (!actionDeadlineAt) return undefined;
+    if (!activeDeadline) return undefined;
 
     setNow(Date.now());
     const interval = window.setInterval(() => setNow(Date.now()), 250);
     return () => window.clearInterval(interval);
-  }, [actionDeadlineAt]);
+  }, [activeDeadline]);
 
   return (
     <div className="action-bar">
       <div className={timerClassName} role="timer" aria-live={isLocalTurn ? "polite" : "off"}>
         <div className="turn-timer-copy">
           <span>{actionDeadlineAt ? timerLabel : "Waiting for next turn"}</span>
-          <strong>{actionDeadlineAt ? `${remainingSeconds}s` : "--"}</strong>
+          <strong>{activeDeadline ? `${remainingSeconds}s` : "--"}</strong>
         </div>
         <div className="turn-timer-track" aria-hidden="true">
           <span style={{ transform: `scaleX(${timerProgress})` }} />

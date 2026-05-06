@@ -32,6 +32,15 @@ export type LegalAction = {
   callAmount?: number;
 };
 
+export type HandHistoryEntry = {
+  handNumber: number;
+  endedAt: number;
+  communityCards: Card[];
+  showdown: boolean;
+  winners: Array<{ userId: string; displayName: string; amount: number; handName?: string; holeCards?: Card[] }>;
+  participants: Array<{ userId: string; displayName: string; delta: number }>;
+};
+
 export type RoomPublicState = {
   roomCode: string;
   maxPlayers: number;
@@ -48,6 +57,7 @@ export type RoomPublicState = {
   lastAction: string;
   winners: Array<{ userId: string; displayName: string; amount: number; handName?: string }>;
   actionDeadlineAt: number | null;
+  history: HandHistoryEntry[];
 };
 
 export type PlayerPrivateState = {
@@ -98,7 +108,9 @@ export type ClientToServerEvents = {
 
 export type SfxName =
   | "deal"
+  | "card"
   | "chip"
+  | "chips-fly"
   | "check"
   | "fold"
   | "all-in"
