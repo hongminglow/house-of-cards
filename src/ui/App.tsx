@@ -218,11 +218,11 @@ export function App() {
               Table name
               <input value={displayName} onChange={(event) => setDisplayName(event.target.value)} maxLength={24} required />
             </label>
+            {notice ? <p className="login-error-message">{notice}</p> : null}
             <button className="primary-button" type="submit">
               Enter lobby
             </button>
           </form>
-          {notice ? <div className="notice">{notice}</div> : null}
         </section>
       </main>
     );

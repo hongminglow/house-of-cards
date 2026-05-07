@@ -198,6 +198,13 @@ input:disabled {
   background: rgba(7, 17, 15, 0.72);
 }
 
+.login-error-message {
+  margin: -2px 0 4px;
+  color: #ff6b6b;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
 .home-header {
   display: flex;
   align-items: center;
