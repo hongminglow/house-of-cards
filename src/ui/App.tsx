@@ -277,7 +277,7 @@ export function App() {
               ) : (
                 <div className="empty-rooms">
                   <strong>No open rooms yet</strong>
-                  <span>Create a room and the lobby list will update here.</span>
+                  <span>Start a table to be the first one in the lobby.</span>
                 </div>
               )}
             </div>
