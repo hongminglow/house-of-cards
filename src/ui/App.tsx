@@ -814,7 +814,7 @@ function IconSoundButton({
   return (
     <div className="sound-control">
       <button
-        className={active ? "icon-toggle active" : "icon-toggle"}
+        className={active ? "icon-toggle sound-button active" : "icon-toggle sound-button"}
         onClick={onToggleSound}
         aria-label={active ? "Mute SFX" : "Unmute SFX"}
         title={active ? "Mute SFX" : "Unmute SFX"}
