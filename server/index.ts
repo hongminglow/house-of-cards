@@ -53,7 +53,8 @@ app.get("/api/rooms", (_request, response) => {
     [...rooms.values()].map((room) => ({
       code: room.code,
       seats: room.publicState().seats.length,
-      street: room.publicState().street
+      street: room.publicState().street,
+      maxPlayers: room.publicState().maxPlayers
     }))
   );
 });

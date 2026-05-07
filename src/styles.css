@@ -326,11 +326,24 @@ input:disabled {
   text-align: left;
 }
 
+.room-row:disabled {
+  cursor: not-allowed;
+}
+
 .room-row:not(:disabled):hover {
   border-color: rgba(117, 216, 181, 0.48);
   background:
     linear-gradient(90deg, rgba(117, 216, 181, 0.16), rgba(232, 202, 128, 0.08)),
     rgba(14, 32, 27, 0.88);
+}
+
+.room-row.is-empty {
+  opacity: 0.56;
+}
+
+.room-row.is-full .room-capacity {
+  border-color: rgba(255, 130, 130, 0.36);
+  color: #ffb0b0;
 }
 
 .room-row span:first-child {
@@ -370,6 +383,36 @@ input:disabled {
   border-radius: 12px;
   background: rgba(0, 0, 0, 0.16);
   text-align: center;
+}
+
+.lobby-toast {
+  position: fixed;
+  right: 28px;
+  bottom: 28px;
+  z-index: 30;
+  display: grid;
+  gap: 6px;
+  width: min(360px, calc(100vw - 32px));
+  padding: 14px 16px;
+  border: 1px solid rgba(232, 202, 128, 0.28);
+  border-left: 3px solid #e8ca80;
+  border-radius: 12px;
+  background:
+    linear-gradient(180deg, rgba(23, 44, 38, 0.96), rgba(11, 24, 21, 0.96)),
+    rgba(11, 24, 21, 0.96);
+  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.34);
+  backdrop-filter: blur(18px);
+}
+
+.lobby-toast strong {
+  color: #fff3d2;
+  font-size: 13px;
+}
+
+.lobby-toast span {
+  color: #ccbfa6;
+  font-size: 12px;
+  line-height: 1.4;
 }
 
 .player-card h2 {

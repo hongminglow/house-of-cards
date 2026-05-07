@@ -21,6 +21,7 @@ type RoomListItem = {
   code: string;
   seats: number;
   street: string;
+  maxPlayers: number;
 };
 
 const serverUrl =
@@ -52,6 +53,7 @@ export function App() {
   const [rulesOpen, setRulesOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [gameSceneReady, setGameSceneReady] = useState(false);
+  const [lobbyToast, setLobbyToast] = useState<{ title: string; message: string } | null>(null);
   const audio = useRef<AudioContext | null>(null);
   const soundSettings = useRef({ enabled: soundEnabled, volume });
   const lastAudibleVolume = useRef(volume);
@@ -120,6 +122,12 @@ export function App() {
   }, [room?.roomCode]);
 
   useEffect(() => {
+    if (!lobbyToast) return;
+    const timeout = window.setTimeout(() => setLobbyToast(null), 3200);
+    return () => window.clearTimeout(timeout);
+  }, [lobbyToast]);
+
+  useEffect(() => {
     const roomCode = room?.roomCode;
     const boardCount = room?.communityCards.length ?? 0;
     const previous = previousBoardReveal.current;
@@ -172,6 +180,54 @@ export function App() {
 
   function joinRoom(code?: string) {
     socket.emit("joinRoom", { roomCode: code?.trim().toUpperCase() || undefined }, setSnapshot);
+  }
+
+  function handleLobbyRoomSelect(listedRoom: RoomListItem) {
+    if (listedRoom.seats <= 0) {
+      return;
+    }
+
+    if (listedRoom.seats >= listedRoom.maxPlayers) {
+      setLobbyToast({
+        title: "Table full",
+        message: "That table is already full. Pick another open room or start your own."
+      });
+      return;
+    }
+
+    setLobbyToast(null);
+    joinRoom(listedRoom.code);
+  }
+
+  function handleRoomCodeJoin() {
+    const normalizedCode = roomCode.trim().toUpperCase();
+    if (!normalizedCode) {
+      return;
+    }
+
+    const matchedRoom = rooms.find((listedRoom) => listedRoom.code === normalizedCode);
+    if (!matchedRoom) {
+      setLobbyToast({
+        title: "Room not found",
+        message: "That room number is not open right now. Check the code and try again."
+      });
+      return;
+    }
+
+    if (matchedRoom.seats <= 0) {
+      return;
+    }
+
+    if (matchedRoom.seats >= matchedRoom.maxPlayers) {
+      setLobbyToast({
+        title: "Table full",
+        message: "That room is already full. Try another table or create your own."
+      });
+      return;
+    }
+
+    setLobbyToast(null);
+    joinRoom(normalizedCode);
   }
 
   function act(payload: PokerActionPayload) {
@@ -255,7 +311,15 @@ export function App() {
 
             <div className="join-row room-code-row">
               <input value={roomCode} onChange={(event) => setRoomCode(event.target.value.toUpperCase())} placeholder="Room no" />
-              <button onClick={() => joinRoom(roomCode)}>Join</button>
+              <button
+                disabled={
+                  !roomCode.trim() ||
+                  rooms.some((listedRoom) => listedRoom.code === roomCode.trim().toUpperCase() && listedRoom.seats <= 0)
+                }
+                onClick={handleRoomCodeJoin}
+              >
+                Join
+              </button>
             </div>
 
             <div className="room-list-header">
@@ -266,12 +330,26 @@ export function App() {
             <div className="room-list" aria-label="Available rooms">
               {rooms.length ? (
                 rooms.map((listedRoom) => (
-                  <button className="room-row" key={listedRoom.code} onClick={() => joinRoom(listedRoom.code)}>
+                  <button
+                    className={`room-row${listedRoom.seats <= 0 ? " is-empty" : listedRoom.seats >= listedRoom.maxPlayers ? " is-full" : ""}`}
+                    key={listedRoom.code}
+                    type="button"
+                    disabled={listedRoom.seats <= 0}
+                    onClick={() => handleLobbyRoomSelect(listedRoom)}
+                  >
                     <span>
                       <strong>Room {listedRoom.code}</strong>
-                      <small>{listedRoom.street.toUpperCase()}</small>
+                      <small>
+                        {listedRoom.seats <= 0
+                          ? "Waiting for the first player"
+                          : listedRoom.seats >= listedRoom.maxPlayers
+                            ? "Full table"
+                            : listedRoom.street.toUpperCase()}
+                      </small>
                     </span>
-                    <span className="room-capacity">{listedRoom.seats}/6</span>
+                    <span className="room-capacity">
+                      {listedRoom.seats}/{listedRoom.maxPlayers}
+                    </span>
                   </button>
                 ))
               ) : (
@@ -353,6 +431,12 @@ export function App() {
             {notice ? <div className="notice">{notice}</div> : null}
           </aside>
         </section>
+        {lobbyToast ? (
+          <div className="lobby-toast" role="status" aria-live="polite">
+            <strong>{lobbyToast.title}</strong>
+            <span>{lobbyToast.message}</span>
+          </div>
+        ) : null}
         {rulesOpen ? <RulesModal onClose={() => setRulesOpen(false)} /> : null}
       </main>
     );
